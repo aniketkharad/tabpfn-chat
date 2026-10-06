@@ -1,7 +1,7 @@
 # PROGRESS: tabpfn-chat
 
 Session Date: **2026-10-06**  
-Current Status: **Prompt 4 Complete & Tested. 3-Stage Intelligence Engine & FastAPI Routes Fully Operational.**
+Current Status: **100% Complete. Hardened, Fully Tested (84/84 passing), CLI Replay Operational.**
 
 ---
 
@@ -171,8 +171,50 @@ Current Status: **Prompt 4 Complete & Tested. 3-Stage Intelligence Engine & Fast
    - Total test suite: **74 passed in 1.34s** (`uv run --env-file .env pytest -v`).
    - Total frontend size: **12.5 KB gzipped** (well below the 60 KB limit).
 
+### Prompt 6: Hardening, Adversarial Tests, Seeded Samples & CLI Replay Utility
+1. **Seeded Sample Datasets (`scripts/make_samples.py`)**:
+   - `churn_sample.csv`:
+     - Binary classification, exactly 140 rows, 8 columns (`customer_id`, `age`, `tenure_months`, `monthly_charges`, `total_charges`, `contract_type`, `tech_support`, `churned`).
+     - Mild trap: arbitrary `customer_id` column to be excluded by Planner.
+   - `housing_sample.csv`:
+     - Continuous regression, exactly 120 rows, 7 columns (`sold_date`, `median_income`, `housing_median_age`, `total_rooms`, `total_bedrooms`, `population`, `median_house_value`).
+     - Mild trap: chronological `sold_date` column requiring chronological holdout split.
+   - Output locations: `src/tabchat/frontend/static/samples/` and `src/tabchat/frontend/samples/`.
+   - UI 1-click loading buttons added to `index.html` and wired in `app.js` with mock and live fetch support.
+
+2. **Adversarial & Robustness Test Suite (`tests/test_robustness.py`)**:
+   - **Prompt Injection Isolation**: Hardened `planner_system.md` with explicit data isolation and credential secrecy guardrails. Tested malicious cell values (`"IGNORE PREVIOUS INSTRUCTIONS..."`), verifying they are treated strictly as passive data and cannot hijack execution or leak keys.
+   - **Crash Recovery Simulation**: Ran full pipeline to Step 2 (Plan generated), force-killed Python process via `os._exit(1)` simulation, re-instantiated application on fresh process pointing to same directory, called `POST /api/run` and verified complete successful execution using persisted disk state.
+   - **Extreme Value Tests**:
+     - Severe class imbalance (98 negative, 2 positive): verified compilation succeeds and execution flags low support warning.
+     - Ultra-sparse class (< 2 samples): verified compiler rejection.
+     - Multi-collinear identical columns: verified graceful execution and warning detection.
+
+3. **CLI Replay Utility (`src/tabchat/replay.py`)**:
+   - Runnable via `uv run python -m tabchat.replay <session_id>`.
+   - Prints structured, chronological terminal audit trail:
+     - Session Initialization timestamp.
+     - Dataset Shape and Column Metadata table.
+     - Chat Turns (User inputs and Assistant outputs).
+     - Generated Job Spec JSON.
+     - TabPFN execution metrics vs Baseline comparison table.
+     - Sample predictions preview.
+     - Final Calibrated Narration.
+     - Explicit diagnostic warnings if any file is missing or corrupted.
+   - Fully unit-tested in `tests/test_replay.py` across full sessions, partial sessions, corrupted files, and CLI arguments.
+
+4. **Local Runbook & Documentation (`README.md`, `src/tabchat/main.py`)**:
+   - Exposes `tabchat.main:app` for standard command: `uv run uvicorn tabchat.main:app --reload`.
+   - Comprehensive local setup instructions, mock mode instructions, operational boundaries, and detailed troubleshooting guide for 429 rate limit pacing and 503 daily quota exhaustion kill switch.
+   - **Total test suite: 84 passed in 2.61s** (`uv run pytest -v`).
+
 ---
 
-## Next Steps
+## Status Summary
 
-- System verification and final end-to-end user checks.
+- **Total Tasks**: Prompts 1 through 6 Complete (100%).
+- **Automated Tests**: 84 passed, 0 failures, 0 warnings.
+- **Frontend Size**: ~13.5 KB gzipped (well within 60 KB budget).
+- **Backend Idle RSS**: < 75 MB (well within 256 MB budget).
+- **External Dependencies**: Zero runtime bloat, pure FastAPI + pydantic-settings.
+
