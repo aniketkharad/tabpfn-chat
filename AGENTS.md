@@ -1,63 +1,42 @@
-# PART 0: `AGENTS.md` (paste verbatim)
+# PART 0: `AGENTS.md` (paste into the new repo)
 
 ## Mission
 
-RelPilot is an MCP server (plus a thin Gemini CLI agent) that makes zero-shot predictions over a multi-table relational database using TabPFN-Rel (the hosted TabPFN-3.5 API; no feature engineering, no hand-written SQL joins). It lets an agent act on predictions ONLY where a temporal backtest has shown the model to be trustworthy.
-
-Pitch: "Ask your database about the future. The agent acts only where the model has proven it deserves trust."
+tabpfn-chat is a lightweight public web app. A user uploads a small table and chats with an LLM (Gemini now, swappable) to clarify what they want. The backend turns the agreed intent into a validated job spec, runs it on the TabPFN-3.5 hosted API, and explains results with calibrated uncertainty. Everything that happens is logged in order.
 
 ## Working rules (non-negotiable)
 
 1. **Human in the loop.**
-   - **Installs:** before ANY dependency install or change (`uv add`, `uv pip`, `uv sync` that changes deps) and before ANY dataset download: STOP. State the package or URL, version, purpose and size, then wait for my "proceed".
-   - **Keys:** needed are `GEMINI_API_KEY` and `TABPFN_TOKEN`. When needed, tell me to add them to `.env` (copied from `.env.example`) and wait for "done". Never print, log, echo, commit or request secrets in chat. Check presence with boolean checks only. `.env` goes in `.gitignore` in the first commit.
-   - **Checkpoints:** at every CHECKPOINT, stop and summarize what is done, what is next, and what you need from me.
-   - **Narration:** before any command that touches the network or files outside `src/`, write one line: "About to do X because Y".
-2. **Environment: uv only.**
-   - Use `uv init`, `uv add`, `uv run`, `uv sync`. Pin Python in `.python-version` (3+ stable versoin unless a dependency needs otherwise; ask).
-   - The venv is project-local. Prefer `uv run --env-file .env` over adding python-dotenv (verify support in the installed uv).
-   - Never use `pip`, global installs or `sudo`. Never touch files outside the repo. Flag anything needing elevated privileges.
-   - Assume this runs inside my VM or container.
-   - Network is allowed only to: the Gemini API, the Prior Labs API, PyPI via uv (after approval), and dataset URLs I approved.
-3. **Minimum code.** Hand-written Python in `src/` must stay at or under about 400 lines (tests excluded). Prefer library functionality (TabPFN-Rel/RPI, the RelArena model registry, the MCP SDK, google-genai) over custom code. No frontend framework. If a feature needs more than about 60 lines, justify it and ask first.
-4. **Quota is limited.** Config defaults: `MAX_TRAIN_ENTITIES=2000`, `MAX_PREDICT_ENTITIES=500`, one backtest cutoff, at most 3 TabPFN fits per run, `MAX_GEMINI_CALLS_PER_SESSION=30`. Print API usage after each fit. On HTTP 429, stop and tell me.
-5. **Verify, don't recall.** Never hard-code API or model facts from memory. Record verified facts with source URLs in `docs/NOTES.md`. The Gemini model id comes from env `GEMINI_MODEL` (pick the latest Flash from the models list).
-6. **Honesty.** Numbers in README or RESULTS come only from runs actually executed. Report null or negative results as they are. Keep run artifacts.
-
-## Architecture (MVP)
-
-```
-workspaces/<name>/
-  data/*.csv|parquet      relational tables (any DB export)
-  schema.yaml             PKs, FKs, time columns (or introspected)
-  tasks/*.yaml            declarative prediction tasks   (community unit 1)
-  skills/*.md             playbooks the agent can read   (community unit 2)
-src/relpilot/
-  workspace.py            load tables, schema, tasks, skills
-  engine.py               thin wrapper over TabPFN-Rel RPI + free baselines; backtest; trust report
-  gate.py                 backtest-derived act-threshold; act vs review decision
-  server.py               MCP server (stdio)
-  agent.py                Gemini CLI that connects to the MCP server
-runs/<run_id>/            artifacts (gitignored)
-outbox.jsonl             proposed actions (audit trail)
-```
-
-## MCP tools (5)
-
-1. `describe_workspace()`: tables, columns, FKs, time columns, available tasks and skills.
-2. `read_skill(name)`.
-3. `run_task(task, model="tabpfn-rel-client", cutoff=None)`: fit on labels strictly before the validation cutoff, backtest on the latest fully-labelled period, predict current entities, write artifacts, and return a compact trust report plus the top-K.
-4. `trust_report(run_id)`: metric vs baselines (constant, plus LightGBM if the registry exposes it at no API cost), calibration bins and ECE, precision and lift at k, and the recommended act-threshold with its supporting sample size.
-5. `propose_actions(run_id, action, min_precision=0.8)`: the gate. Entities above the backtest-derived threshold go to `outbox.jsonl` with status `proposed`. The rest go to a `needs_review` list with reasons. If no threshold reaches the precision target, propose nothing and say so.
-
-Rules: tool outputs are compact JSON (<= 3 KB); large outputs go to `runs/`; the data source is read-only; there is no free-form SQL tool.
-
-## Task YAML (the community unit)
-
-`name`, `description`, entity table and id column, label definition (declarative, e.g. "no rows in table X for the entity in the next N days"), time column, window length, action hints. The exact schema is decided in Prompt 1 from what RPI supports.
-
-## Deliberately NOT building
-
-Web UI (optional Prompt 4), auth, Postgres/BigQuery connectors (document as extension points), a custom subgraph sampler or kNN exemplar retrieval, real external action integrations, multi-user support.
+   - Before ANY dependency install or change, any dataset download, any new external service or account, or any deploy: STOP. State what, why, size, and wait for my "proceed".
+   - Keys: `GEMINI_API_KEY`, `TABPFN_TOKEN`. Ask me to add them to `.env` and wait for "done". Never print, log, echo, commit or request secrets in chat. fCheck presence with booleans only.
+   - Stop at every CHECKPOINT and summarize: done / next / needs from me.
+   - Before commands that touch the network or files outside the repo, write one line: "About to do X because Y".
+2. **uv only.** `uv init/add/sync/run`; Python pinned; project-local venv; never `pip`, `sudo` or global installs; never touch files outside the repo. Prefer `uv run --env-file .env`.
+3. **Light by budget.** Targets (measure and report, justify any miss): backend idle RSS <= 256 MB, Docker image <= 400 MB, backend runtime dependencies as few as possible, frontend <= 60 KB gzipped with no framework and no CDN, hand-written backend Python <= ~1,500 lines, frontend <= ~600 lines. Ask before exceeding.
+4. **Verify, don't recall.** Never hard-code API, model, quota or pricing facts from memory. Record verified facts with source URLs and dates in `docs/FACTS.md`. Model ids come from env (`LLM_PRIMARY_MODEL`, `LLM_FALLBACK_MODEL`).
+5. **Secrets and logs.** Keys only in env or the host secret store, never in code, images, git, logs, error messages or the browser. All logging goes through one redacting logger. Uploaded cell values are never logged or persisted.
+6. **Offline-first tests.** Unit tests use fake LLM and fake TabPFN providers and need no network. Live tests are opt-in.
+7. **Honesty.** README and results contain only measured numbers from runs actually executed.
+8. **Progress.** Keep `docs/PROGRESS.md` updated (done, open, exact commands) so a fresh session can continue.
 
 ---
+
+# updated AGENTS.md;
+
+## Mission
+
+Build a production-grade, local-first web app (`tabchat`) running on FastAPI and vanilla HTML/CSS/JS. A user uploads a CSV (<=200 rows, <=50 columns), chats with an LLM (Gemini 3.8 Flash with Flash-Lite fallback) to clarify intent, generates a validated Pydantic Job Spec, executes it deterministically against TabPFN-3.5 via Prior Labs' API with ZERO LLM calls during training, and receives a grounded explanation with calibrated uncertainty.
+
+## Architectural Mandates
+
+1. Local-First & Disk-Backed: Everything lives under `data/sessions/<session_id>/` (raw data, dataset cards, chat history, job specs, results). The backend must survive process restarts (`uvicorn --reload`) without losing active session state or cached artifacts.
+2. Zero LLM Calls in Execution: The LLM plans (Planner) and narrates (Narrator). The training, split validation, baseline computation, metric scoring, and TabPFN API invocation (Executor) are 100% deterministic Python code.
+3. Disk Fit Caching: Every TabPFN run is hashed by `sha256(raw_csv_bytes + canonical_job_spec_json)`. Results are stored in `data/cache/tabpfn/<hash>.json`. Never pay API tokens twice for the exact same dataset and spec.
+4. Strict Concurrency & Rate Limiting: Lock all LLM API invocations behind an `asyncio.Semaphore(1)`. Enforce a token-bucket rate limiter of <= 12 RPM (against the 15 RPM free cap). On 429 burst errors, fall back to Flash-Lite. On daily quota exhaustion (500 RPD), immediately trip a fatal 503 kill switch.
+5. No Framework Bloat: Pure FastAPI, pydantic-settings, and standard library. Vanilla JS/HTML/CSS for frontend. No Node.js build step, no Docker multi-stage cloud bloat, no remote log shippers, no hash-chain gimmicks.
+
+## Hard Operating Boundaries
+
+- Upload Caps: File size <= 1 MB, UTF-8 encoded, <= 200 rows, <= 50 columns. String cells <= 64 characters. Integers within signed int32 (-2,147,483,648 to 2,147,483,647). Floats finite and within IEEE 754 half-precision range (|x| <= 65504).
+- Turn Caps: Maximum 15 conversation turns per session. Maximum 2 auto-repair attempts for invalid job specs.
+- Safety & Privacy: LLM never sees the full raw CSV table—only the `dataset_card` (column names, inferred dtypes, null counts, unique counts, and top 5 preview rows). Cell values are NEVER logged to terminal or disk log files.
