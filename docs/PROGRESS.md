@@ -212,7 +212,7 @@ Current Status: **100% Complete. Hardened, Fully Tested (84/84 passing), CLI Rep
 
 ## Status Summary
 
-- **Total Tasks**: Prompts 1 through 6 Complete (100%).
+- **Total Tasks**: Prompts 1 through 6 Complete; README streamlined to minimalist reproducible guide (100%).
 - **Automated Tests**: 84 passed, 0 failures, 0 warnings.
 - **Frontend Size**: ~13.5 KB gzipped (well within 60 KB budget).
 - **Backend Idle RSS**: < 75 MB (well within 256 MB budget).
