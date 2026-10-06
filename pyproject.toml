@@ -2,6 +2,7 @@
 name = "tabchat"
 version = "0.1.0"
 description = "Lightweight local-first chat & prediction web app for TabPFN-3.5"
+license = "Apache-2.0"
 readme = "README.md"
 authors = [
     { name = "Aniket Kharad", email = "92918607+aniketkharad@users.noreply.github.com" }

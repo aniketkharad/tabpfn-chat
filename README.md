@@ -139,7 +139,7 @@ uv run pytest
 
 ## 📄 License & Terms
 
-Released under the [MIT License](LICENSE) ([GitHub](https://github.com/aniketkharad/tabpfn-chat/blob/main/LICENSE)).
+Released under the [Apache License, Version 2.0](LICENSE) ([GitHub](https://github.com/aniketkharad/tabpfn-chat/blob/main/LICENSE)).
 
 - **TabPFN-Rel & TabPFN-3.5 API**: Subject to Prior Labs terms of service and model licenses. See [Prior Labs Documentation](https://docs.priorlabs.ai/) and [PriorLabs/tabpfn-rel](https://github.com/PriorLabs/tabpfn-rel).
 - **Google Gemini API**: Subject to the [Google APIs Terms of Service](https://developers.google.com/terms) and [Gemini API Additional Terms of Service](https://ai.google.dev/terms). In compliance with free-tier terms, TabPFN Chat transmits only structural schema metadata and 5 preview rows to the LLM—never full raw tabular datasets.
