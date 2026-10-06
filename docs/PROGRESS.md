@@ -208,11 +208,22 @@ Current Status: **100% Complete. Hardened, Fully Tested (84/84 passing), CLI Rep
    - Comprehensive local setup instructions, mock mode instructions, operational boundaries, and detailed troubleshooting guide for 429 rate limit pacing and 503 daily quota exhaustion kill switch.
    - **Total test suite: 84 passed in 2.61s** (`uv run pytest -v`).
 
+### Capability Demonstrations (`demos/`)
+1. **Demo 01: Binary Classification (`demos/01_classification/`)**:
+   - Automated via Playwright with system Google Chrome.
+   - Evaluated on `churn_sample.csv` (140 rows × 8 cols).
+   - Conversational intent handled live with Gemini Planner (`gemini-3.5-flash-lite`); excluded `customer_id`.
+   - Executed live against Prior Labs TabPFN-3.5 API.
+   - Model accuracy: **0.9286** vs baseline **0.5357** (Lift: **+0.3929**).
+   - Log loss: **0.1615** vs baseline **0.6906** (Delta: **-0.5291**).
+   - Grounded narrative generated live with Gemini Narrator.
+   - Captured artifacts: `classification_dashboard.png`, `classification_results_card.png`, `classification_session.html`, `replay_audit.txt`, and `churn_sample.csv`.
+
 ---
 
 ## Status Summary
 
-- **Total Tasks**: Prompts 1 through 6 Complete; README streamlined to minimalist reproducible guide (100%).
+- **Total Tasks**: Prompts 1 through 6 Complete; Demo 01 (Classification) executed and verified live (100%).
 - **Automated Tests**: 84 passed, 0 failures, 0 warnings.
 - **Frontend Size**: ~13.5 KB gzipped (well within 60 KB budget).
 - **Backend Idle RSS**: < 75 MB (well within 256 MB budget).
