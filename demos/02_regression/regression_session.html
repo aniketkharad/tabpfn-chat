@@ -1,0 +1,222 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>tabchat — Local-First TabPFN Assistant</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- System Alert Banners & Modals -->
+  <div id="rate-limit-banner" class="banner banner-warning hidden" role="alert">
+    <div class="banner-content">
+      <span class="banner-icon">⚠️</span>
+      <span id="rate-limit-message">Rate limit hit. Waiting for cooldown...</span>
+    </div>
+  </div>
+
+  <div id="quota-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Quota Exhausted</h3>
+      </div>
+      <div class="modal-body">
+        <p>Daily API budget exhausted. Please resume tomorrow.</p>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-close-quota-modal" class="btn btn-secondary">Acknowledge</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Application Container -->
+  <div id="app" class="app-layout">
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-logo">⚡</span>
+        <h1 class="brand-title">tabchat</h1>
+        <span class="brand-badge">TabPFN-3.5</span>
+        <span id="mock-badge" class="badge badge-mock hidden">Mock Mode</span>
+      </div>
+      <div class="header-status">
+        <div class="status-pill">
+          <span class="status-label">LLM:</span>
+          <span id="concurrency-badge" class="status-val idle">Idle</span>
+        </div>
+        <div class="status-pill">
+          <span class="status-label">Turns:</span>
+          <span id="turns-badge" class="status-val">14/15 remaining</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Two-Pane Workspace -->
+    <main class="workspace-grid">
+      <!-- Left Pane: Data & Status Inspector -->
+      <aside class="pane pane-inspector" id="left-pane">
+        <!-- Session Controls -->
+        <section class="card session-card">
+          <div class="card-header">
+            <h2>Session Status</h2>
+            <button id="btn-reset-session" class="btn btn-xs btn-outline-danger" title="Clear disk state and cookie">
+              Reset Session
+            </button>
+          </div>
+          <div class="session-info">
+            <span class="session-label">Session ID:</span>
+            <code id="session-id-display" class="session-code">5f9ac6905bdcb649672ea8378da2d67b</code>
+          </div>
+        </section>
+
+        <!-- Upload Zone -->
+        <section class="card upload-card">
+          <div class="card-header">
+            <h2>Dataset Upload</h2>
+          </div>
+          <div id="drop-zone" class="drop-zone" tabindex="0" role="region" aria-label="CSV file drop zone">
+            <div class="drop-icon">📁</div>
+            <p class="drop-text">Drag &amp; drop your CSV file here</p>
+            <p class="drop-subtext">or</p>
+            <label class="btn btn-sm btn-primary file-browse-label">
+              Browse Files
+              <input type="file" id="file-input" accept=".csv" class="visually-hidden">
+            </label>
+          </div>
+          <div class="limits-notice">
+            <span>Limits:</span> ≤ 200 rows, ≤ 50 columns, cells ≤ 64 chars, max 1 MB.
+          </div>
+          <div class="samples-container">
+            <span class="samples-label">Quick Load Sample:</span>
+            <div class="samples-btn-group">
+              <button type="button" id="btn-sample-churn" class="btn btn-xs btn-sample" title="140 rows, 8 cols (Classification)">
+                ⚡ Churn Sample
+              </button>
+              <button type="button" id="btn-sample-housing" class="btn btn-xs btn-sample" title="120 rows, 7 cols (Regression)">
+                🏡 Housing Sample
+              </button>
+            </div>
+          </div>
+          <!-- Upload Validation Error Callout -->
+          <div id="upload-errors" class="upload-errors hidden" role="alert">
+            <div class="errors-header">
+              <span class="error-icon">❌</span>
+              <strong>Validation Errors:</strong>
+            </div>
+            <ul id="upload-errors-list" class="errors-list"></ul>
+          </div>
+        </section>
+
+        <!-- Dataset Card Component (revealed after upload) -->
+        <section id="dataset-card-section" class="card dataset-card">
+          <div class="card-header">
+            <h2>Dataset Preview</h2>
+            <span id="dataset-shape-badge" class="badge badge-info">120 rows × 7 cols</span>
+          </div>
+          
+          <div class="column-types-wrapper">
+            <span class="section-subtitle">Schema &amp; Types:</span>
+            <div id="column-types-list" class="column-types-list"><div class="col-chip"><span class="col-name">sold_date</span><span class="col-type type-unknown">unknown</span></div><div class="col-chip"><span class="col-name">median_income</span><span class="col-type type-unknown">unknown</span></div><div class="col-chip"><span class="col-name">housing_median_age</span><span class="col-type type-unknown">unknown</span></div><div class="col-chip"><span class="col-name">total_rooms</span><span class="col-type type-unknown">unknown</span></div><div class="col-chip"><span class="col-name">total_bedrooms</span><span class="col-type type-unknown">unknown</span></div><div class="col-chip"><span class="col-name">population</span><span class="col-type type-unknown">unknown</span></div><div class="col-chip"><span class="col-name">median_house_value</span><span class="col-type type-unknown">unknown</span></div></div>
+          </div>
+
+          <div class="table-preview-wrapper">
+            <span class="section-subtitle">Top 5 Preview Rows:</span>
+            <div class="table-scroll-container">
+              <table id="preview-table" class="data-table">
+                <thead id="preview-table-head"><tr><th>sold_date</th><th>median_income</th><th>housing_median_age</th><th>total_rooms</th><th>total_bedrooms</th><th>population</th><th>median_house_value</th></tr></thead>
+                <tbody id="preview-table-body"><tr><td>2023-01-19</td><td>5.279</td><td>37</td><td>3224</td><td>657</td><td>673</td><td>234.83</td></tr><tr><td>2023-01-21</td><td>9.607</td><td>50</td><td>2432</td><td>603</td><td>2493</td><td>317.25</td></tr><tr><td>2023-01-25</td><td>8.622</td><td>27</td><td>1303</td><td>330</td><td>523</td><td>308.71</td></tr><tr><td>2023-01-29</td><td>11.293</td><td>37</td><td>4596</td><td>936</td><td>1562</td><td>369.85</td></tr><tr><td>2023-01-31</td><td>6.853</td><td>27</td><td>4186</td><td>911</td><td>2524</td><td>308.1</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <!-- Right Pane: Interactive Timeline & Workspace -->
+      <section class="pane pane-workspace" id="right-pane">
+        <!-- Chat & Narrative Feed -->
+        <div id="chat-feed" class="chat-feed" role="log" aria-live="polite">
+          <div class="message message-system">
+            <div class="message-content">
+              Welcome to <strong>tabchat</strong>. Upload a CSV table on the left, then describe your target or goal below. Gemini will formulate an analytical plan for TabPFN-3.5.
+            </div>
+          </div>
+        <div class="message message-system"><div class="message-content">Dataset loaded: 120 rows, 7 columns.</div></div><div class="message message-user"><div class="message-content">I want to predict continuous house values (median_house_value) based on income, rooms, and other features. Use sold_date for chronological validation split, and evaluate with RMSE.</div></div><div class="message message-assistant"><div class="message-content">I've configured an analytical plan to predict 'median_house_value'. Predicting continuous median_house_value using demographic and property features, validating chronologically by sold_date and evaluated using RMSE.</div></div><div id="active-plan-card" class="plan-card">
+      <div class="plan-card-header">
+        <span class="plan-title">📋 Proposed Analysis Plan</span>
+        <span class="badge badge-info">REGRESSION</span>
+      </div>
+      <div class="plan-details-grid">
+        <div class="plan-item"><span class="plan-item-label">Target Column</span><span class="plan-item-val">median_house_value</span></div>
+        <div class="plan-item"><span class="plan-item-label">Validation Split</span><span class="plan-item-val">chronological (80/20)</span></div>
+        <div class="plan-item"><span class="plan-item-label">Features Included (5)</span><div class="pill-list"><span class="feature-pill">median_income</span><span class="feature-pill">housing_median_age</span><span class="feature-pill">total_rooms</span><span class="feature-pill">total_bedrooms</span><span class="feature-pill">population</span></div></div>
+        <div class="plan-item"><span class="plan-item-label">Features Excluded (1)</span><div class="pill-list"><span class="feature-pill excluded">sold_date</span></div></div>
+      </div>
+      <div class="plan-card-actions">
+        <button id="btn-run-tabpfn" class="btn btn-success">🚀 Confirm &amp; Run TabPFN</button>
+        <span class="plan-edit-hint">Want to change features or target? Reply in chat to adjust the plan.</span>
+      </div>
+    </div><div id="active-results-card" class="results-card">
+      <div class="results-header">
+        <span class="results-title">📊 TabPFN-3.5 Evaluation Results</span>
+        <span class="badge badge-info">Holdout N=24</span>
+      </div>
+      <div>
+        <table class="metrics-table"><thead><tr><th>Metric</th><th>TabPFN-3.5</th><th>Baseline</th><th>Lift / Delta</th></tr></thead><tbody><tr><td><strong>RMSE</strong></td><td class="metric-val">30.8973</td><td class="metric-val">93.6386</td><td class="metric-val lift-positive">-62.7413</td></tr><tr><td><strong>R2</strong></td><td class="metric-val">0.8406</td><td class="metric-val">-0.4642</td><td class="metric-val lift-positive">+1.3048</td></tr></tbody></table>
+      </div>
+      <div class="chart-container">
+        <span class="chart-title">Holdout Prediction Confidences</span>
+        <svg viewBox="0 0 500 134" class="chart-svg">
+        <text x="10" y="25" fill="#94a3b8" font-size="11" font-family="monospace">#96</text>
+        <rect x="50" y="14" width="208" height="14" rx="3" fill="#f59e0b"></rect>
+        <text x="263" y="25" fill="#e2e8f0" font-size="11" font-weight="bold">80% (196.177734375)</text>
+      
+        <text x="10" y="47" fill="#94a3b8" font-size="11" font-family="monospace">#97</text>
+        <rect x="50" y="36" width="208" height="14" rx="3" fill="#f59e0b"></rect>
+        <text x="263" y="47" fill="#e2e8f0" font-size="11" font-weight="bold">80% (402.64019775390625)</text>
+      
+        <text x="10" y="69" fill="#94a3b8" font-size="11" font-family="monospace">#98</text>
+        <rect x="50" y="58" width="208" height="14" rx="3" fill="#f59e0b"></rect>
+        <text x="263" y="69" fill="#e2e8f0" font-size="11" font-weight="bold">80% (386.893310546875)</text>
+      
+        <text x="10" y="91" fill="#94a3b8" font-size="11" font-family="monospace">#99</text>
+        <rect x="50" y="80" width="208" height="14" rx="3" fill="#f59e0b"></rect>
+        <text x="263" y="91" fill="#e2e8f0" font-size="11" font-weight="bold">80% (228.97532653808594)</text>
+      
+        <text x="10" y="113" fill="#94a3b8" font-size="11" font-family="monospace">#100</text>
+        <rect x="50" y="102" width="208" height="14" rx="3" fill="#f59e0b"></rect>
+        <text x="263" y="113" fill="#e2e8f0" font-size="11" font-weight="bold">80% (338.9945983886719)</text>
+      </svg>
+      </div>
+      <div class="table-preview-wrapper">
+        <span class="section-subtitle">Holdout Predictions (Top 5):</span>
+        <div class="table-scroll-container">
+          <table class="data-table"><thead><tr><th>Row</th><th>Actual</th><th>Predicted</th><th>Details</th></tr></thead><tbody><tr><td>96</td><td>229.36</td><td><strong>196.177734375</strong></td><td>q10: 167.3163, q90: 223.0878</td></tr><tr><td>97</td><td>429.09</td><td><strong>402.64019775390625</strong></td><td>q10: 377.964, q90: 425.7655</td></tr><tr><td>98</td><td>416.79</td><td><strong>386.893310546875</strong></td><td>q10: 359.6694, q90: 414.908</td></tr><tr><td>99</td><td>249.38</td><td><strong>228.97532653808594</strong></td><td>q10: 203.968, q90: 253.5526</td></tr><tr><td>100</td><td>351.81</td><td><strong>338.9945983886719</strong></td><td>q10: 314.7658, q90: 363.6304</td></tr></tbody></table>
+        </div>
+      </div>
+      <div class="narration-block">### 1. Executive Summary<br>This evaluation assesses the TabPFN regression model on predicting <code class="inline-code">median_house_value</code> using demographic and property features (<code class="inline-code">median_income</code>, <code class="inline-code">housing_median_age</code>, <code class="inline-code">total_rooms</code>, <code class="inline-code">total_bedrooms</code>, and <code class="inline-code">population</code>), validated via a chronological split on <code class="inline-code">sold_date</code>. <br><br>Out of a total of 120 rows, the model was trained on 96 samples and evaluated on a holdout set of 24 samples. TabPFN achieved a Root Mean Squared Error (RMSE) of <strong>30.8973</strong> and an $R^2$ of <strong>0.8406</strong>, drastically outperforming the trivial mean-target baseline (RMSE: <strong>93.6386</strong>, $R^2$: <strong>-0.4642</strong>).<br><br>---<br><br>### 2. Model Performance vs. Baseline<br>The TabPFN model demonstrates substantial predictive power over the trivial baseline:<br><em> <strong>RMSE</strong>: Reduced from <strong>93.6386</strong> (baseline) down to <strong>30.8973</strong> (TabPFN), yielding an absolute error reduction of <strong>62.7413</strong>.<br></em> <strong>$R^2$ Score</strong>: Improved from <strong>-0.4642</strong> (baseline) to <strong>0.8406</strong> (TabPFN), representing a total $R^2$ lift of <strong>1.3048</strong>. <br><br>While the naive mean baseline fails entirely to capture the temporal and feature-driven trends (resulting in a negative $R^2$), TabPFN successfully captures 84.06% of the variance in housing values on the chronological holdout set.<br><br>---<br><br>### 3. Uncertainty &amp; Sample Analysis<br>TabPFN provides prediction intervals (quantiles $q_{10}$ and $q_{90}$) alongside point estimates ($q_{50}$), allowing for calibrated uncertainty assessment.<br><br><em> <strong>High-Confidence Accuracy</strong>: Inspecting sample predictions (e.g., Row 97), the model predicted a value of <strong>402.64</strong> against an actual of <strong>429.09</strong>, with an 80% prediction interval spanning from <strong>377.96</strong> ($q_{10}$) to <strong>425.77</strong> ($q_{90}$). The actual value fell safely within the expected range, showing tight calibration.<br></em> <strong>Underestimation / Uncertainty</strong>: In instances such as Row 105 (actual value <strong>239.65</strong>, predicted <strong>178.74</strong>), the model underpredicted the target. However, the true value fell outside the upper bound of the interval ($q_{90}$: <strong>208.57</strong>), highlighting an instance where the model was overly confident in a lower valuation due to feature inputs (e.g., a lower median income of 2.796). Across the sampled rows, the actual values consistently track closely to the $q_{50}$ median predictions while remaining bounded by the $q_{10}$–$q_{90}$ prediction intervals.<br><br>---<br><br>### 4. Caveats &amp; Limitations<br><em> <strong>Small Dataset Size Constraint</strong>: The total dataset comprises exactly 120 rows (96 training rows, 24 holdout rows). Because this falls well under 100 rows per standard large-scale benchmark, evaluation variance and confidence intervals are inherently wider. Results on this holdout set should be interpreted with caution regarding generalizability to larger unseen populations.<br></em> <strong>Chronological Split Realism</strong>: The split strategy was strictly chronological (<code class="inline-code">sold_date</code>), meaning the model was trained on past sales and evaluated on future sales. This simulates a real-world deployment scenario without lookahead bias, reinforcing the validity of the strong $R^2$ performance despite the small sample size.</div>
+    </div></div>
+
+        <!-- In-flight progress & timeout banner -->
+        <div id="in-flight-container" class="in-flight-container hidden">
+          <div class="spinner"></div>
+          <span id="in-flight-text" class="in-flight-text">TabPFN is training...</span>
+          <button id="btn-retry-timeout" class="btn btn-xs btn-outline-warning hidden">Retry</button>
+        </div>
+
+        <!-- Chat Input Bar -->
+        <div class="chat-input-bar">
+          <form id="chat-form" class="chat-form">
+            <textarea id="chat-input" class="chat-input" rows="1" placeholder="Ask Gemini to configure a model, clarify your goal, or change target..." aria-label="Chat input message"></textarea>
+            <button type="submit" id="btn-send" class="btn btn-primary btn-send">
+              <span>Send</span>
+              <span class="send-arrow">→</span>
+            </button>
+          </form>
+          <div class="input-help">Press <kbd>Enter</kbd> to send, <kbd>Shift+Enter</kbd> for newline.</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+
+
+</body></html>

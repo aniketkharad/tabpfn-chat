@@ -1,0 +1,222 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>tabchat — Local-First TabPFN Assistant</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- System Alert Banners & Modals -->
+  <div id="rate-limit-banner" class="banner banner-warning hidden" role="alert">
+    <div class="banner-content">
+      <span class="banner-icon">⚠️</span>
+      <span id="rate-limit-message">Rate limit hit. Waiting for cooldown...</span>
+    </div>
+  </div>
+
+  <div id="quota-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Quota Exhausted</h3>
+      </div>
+      <div class="modal-body">
+        <p>Daily API budget exhausted. Please resume tomorrow.</p>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-close-quota-modal" class="btn btn-secondary">Acknowledge</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Application Container -->
+  <div id="app" class="app-layout">
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-logo">⚡</span>
+        <h1 class="brand-title">tabchat</h1>
+        <span class="brand-badge">TabPFN-3.5</span>
+        <span id="mock-badge" class="badge badge-mock hidden">Mock Mode</span>
+      </div>
+      <div class="header-status">
+        <div class="status-pill">
+          <span class="status-label">LLM:</span>
+          <span id="concurrency-badge" class="status-val idle">Idle</span>
+        </div>
+        <div class="status-pill">
+          <span class="status-label">Turns:</span>
+          <span id="turns-badge" class="status-val">14/15 remaining</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Two-Pane Workspace -->
+    <main class="workspace-grid">
+      <!-- Left Pane: Data & Status Inspector -->
+      <aside class="pane pane-inspector" id="left-pane">
+        <!-- Session Controls -->
+        <section class="card session-card">
+          <div class="card-header">
+            <h2>Session Status</h2>
+            <button id="btn-reset-session" class="btn btn-xs btn-outline-danger" title="Clear disk state and cookie">
+              Reset Session
+            </button>
+          </div>
+          <div class="session-info">
+            <span class="session-label">Session ID:</span>
+            <code id="session-id-display" class="session-code">ffe04fc5d78852d318792a7578f9a87c</code>
+          </div>
+        </section>
+
+        <!-- Upload Zone -->
+        <section class="card upload-card">
+          <div class="card-header">
+            <h2>Dataset Upload</h2>
+          </div>
+          <div id="drop-zone" class="drop-zone" tabindex="0" role="region" aria-label="CSV file drop zone">
+            <div class="drop-icon">📁</div>
+            <p class="drop-text">Drag &amp; drop your CSV file here</p>
+            <p class="drop-subtext">or</p>
+            <label class="btn btn-sm btn-primary file-browse-label">
+              Browse Files
+              <input type="file" id="file-input" accept=".csv" class="visually-hidden">
+            </label>
+          </div>
+          <div class="limits-notice">
+            <span>Limits:</span> ≤ 200 rows, ≤ 50 columns, cells ≤ 64 chars, max 1 MB.
+          </div>
+          <div class="samples-container">
+            <span class="samples-label">Quick Load Sample:</span>
+            <div class="samples-btn-group">
+              <button type="button" id="btn-sample-churn" class="btn btn-xs btn-sample" title="140 rows, 8 cols (Classification)">
+                ⚡ Churn Sample
+              </button>
+              <button type="button" id="btn-sample-housing" class="btn btn-xs btn-sample" title="120 rows, 7 cols (Regression)">
+                🏡 Housing Sample
+              </button>
+            </div>
+          </div>
+          <!-- Upload Validation Error Callout -->
+          <div id="upload-errors" class="upload-errors hidden" role="alert">
+            <div class="errors-header">
+              <span class="error-icon">❌</span>
+              <strong>Validation Errors:</strong>
+            </div>
+            <ul id="upload-errors-list" class="errors-list"></ul>
+          </div>
+        </section>
+
+        <!-- Dataset Card Component (revealed after upload) -->
+        <section id="dataset-card-section" class="card dataset-card">
+          <div class="card-header">
+            <h2>Dataset Preview</h2>
+            <span id="dataset-shape-badge" class="badge badge-info">120 rows × 7 cols</span>
+          </div>
+          
+          <div class="column-types-wrapper">
+            <span class="section-subtitle">Schema &amp; Types:</span>
+            <div id="column-types-list" class="column-types-list"><div class="col-chip"><span class="col-name">patient_id</span><span class="col-type type-unknown">unknown</span></div><div class="col-chip"><span class="col-name">age</span><span class="col-type type-unknown">unknown</span></div><div class="col-chip"><span class="col-name">bmi</span><span class="col-type type-unknown">unknown</span></div><div class="col-chip"><span class="col-name">glucose_level</span><span class="col-type type-unknown">unknown</span></div><div class="col-chip"><span class="col-name">insulin</span><span class="col-type type-unknown">unknown</span></div><div class="col-chip"><span class="col-name">blood_pressure</span><span class="col-type type-unknown">unknown</span></div><div class="col-chip"><span class="col-name">has_diabetes</span><span class="col-type type-unknown">unknown</span></div></div>
+          </div>
+
+          <div class="table-preview-wrapper">
+            <span class="section-subtitle">Top 5 Preview Rows:</span>
+            <div class="table-scroll-container">
+              <table id="preview-table" class="data-table">
+                <thead id="preview-table-head"><tr><th>patient_id</th><th>age</th><th>bmi</th><th>glucose_level</th><th>insulin</th><th>blood_pressure</th><th>has_diabetes</th></tr></thead>
+                <tbody id="preview-table-body"><tr><td>PAT-1001</td><td>26</td><td>23.3</td><td>114.2</td><td>15</td><td>76</td><td>0</td></tr><tr><td>PAT-1002</td><td>63</td><td>32.8</td><td>127.1</td><td>99.8</td><td>61</td><td>1</td></tr><tr><td>PAT-1003</td><td>57</td><td>19</td><td>159.8</td><td>162.7</td><td>76</td><td>1</td></tr><tr><td>PAT-1004</td><td>45</td><td>26.1</td><td>125</td><td>16</td><td>67</td><td>0</td></tr><tr><td>PAT-1005</td><td>45</td><td>28.6</td><td>104.9</td><td>123.9</td><td>64</td><td>1</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <!-- Right Pane: Interactive Timeline & Workspace -->
+      <section class="pane pane-workspace" id="right-pane">
+        <!-- Chat & Narrative Feed -->
+        <div id="chat-feed" class="chat-feed" role="log" aria-live="polite">
+          <div class="message message-system">
+            <div class="message-content">
+              Welcome to <strong>tabchat</strong>. Upload a CSV table on the left, then describe your target or goal below. Gemini will formulate an analytical plan for TabPFN-3.5.
+            </div>
+          </div>
+        <div class="message message-system"><div class="message-content">Dataset loaded: 120 rows, 7 columns.</div></div><div class="message message-user"><div class="message-content">I want to predict whether a patient has diabetes (has_diabetes) based on glucose_level, bmi, age, insulin, and blood_pressure. Exclude patient_id as it is an ID. Interpretability is critical for clinical decision support: please explain which biomarkers drive the predictions and evaluate accuracy against the naive baseline.</div></div><div class="message message-assistant"><div class="message-content">I've configured an analytical plan to predict 'has_diabetes'. Predicting binary diabetes status using clinical biomarkers while excluding patient identifier patient_id and evaluating accuracy against the naive baseline.</div></div><div id="active-plan-card" class="plan-card">
+      <div class="plan-card-header">
+        <span class="plan-title">📋 Proposed Analysis Plan</span>
+        <span class="badge badge-info">CLASSIFICATION</span>
+      </div>
+      <div class="plan-details-grid">
+        <div class="plan-item"><span class="plan-item-label">Target Column</span><span class="plan-item-val">has_diabetes</span></div>
+        <div class="plan-item"><span class="plan-item-label">Validation Split</span><span class="plan-item-val">random (80/20)</span></div>
+        <div class="plan-item"><span class="plan-item-label">Features Included (5)</span><div class="pill-list"><span class="feature-pill">age</span><span class="feature-pill">bmi</span><span class="feature-pill">glucose_level</span><span class="feature-pill">insulin</span><span class="feature-pill">blood_pressure</span></div></div>
+        <div class="plan-item"><span class="plan-item-label">Features Excluded (1)</span><div class="pill-list"><span class="feature-pill excluded">patient_id</span></div></div>
+      </div>
+      <div class="plan-card-actions">
+        <button id="btn-run-tabpfn" class="btn btn-success">🚀 Confirm &amp; Run TabPFN</button>
+        <span class="plan-edit-hint">Want to change features or target? Reply in chat to adjust the plan.</span>
+      </div>
+    </div><div id="active-results-card" class="results-card">
+      <div class="results-header">
+        <span class="results-title">📊 TabPFN-3.5 Evaluation Results</span>
+        <span class="badge badge-info">Holdout N=24</span>
+      </div>
+      <div>
+        <table class="metrics-table"><thead><tr><th>Metric</th><th>TabPFN-3.5</th><th>Baseline</th><th>Lift / Delta</th></tr></thead><tbody><tr><td><strong>ACCURACY</strong></td><td class="metric-val">0.8333</td><td class="metric-val">0.6667</td><td class="metric-val lift-positive">+0.1666</td></tr><tr><td><strong>LOG_LOSS</strong></td><td class="metric-val">0.3132</td><td class="metric-val">0.6375</td><td class="metric-val lift-positive">-0.3243</td></tr></tbody></table>
+      </div>
+      <div class="chart-container">
+        <span class="chart-title">Holdout Prediction Confidences</span>
+        <svg viewBox="0 0 500 134" class="chart-svg">
+        <text x="10" y="25" fill="#94a3b8" font-size="11" font-family="monospace">#56</text>
+        <rect x="50" y="14" width="246" height="14" rx="3" fill="#10b981"></rect>
+        <text x="301" y="25" fill="#e2e8f0" font-size="11" font-weight="bold">95% (0)</text>
+      
+        <text x="10" y="47" fill="#94a3b8" font-size="11" font-family="monospace">#0</text>
+        <rect x="50" y="36" width="245" height="14" rx="3" fill="#10b981"></rect>
+        <text x="300" y="47" fill="#e2e8f0" font-size="11" font-weight="bold">94% (0)</text>
+      
+        <text x="10" y="69" fill="#94a3b8" font-size="11" font-family="monospace">#57</text>
+        <rect x="50" y="58" width="254" height="14" rx="3" fill="#10b981"></rect>
+        <text x="309" y="69" fill="#e2e8f0" font-size="11" font-weight="bold">98% (0)</text>
+      
+        <text x="10" y="91" fill="#94a3b8" font-size="11" font-family="monospace">#24</text>
+        <rect x="50" y="80" width="180" height="14" rx="3" fill="#10b981"></rect>
+        <text x="235" y="91" fill="#e2e8f0" font-size="11" font-weight="bold">69% (0)</text>
+      
+        <text x="10" y="113" fill="#94a3b8" font-size="11" font-family="monospace">#21</text>
+        <rect x="50" y="102" width="244" height="14" rx="3" fill="#10b981"></rect>
+        <text x="299" y="113" fill="#e2e8f0" font-size="11" font-weight="bold">94% (0)</text>
+      </svg>
+      </div>
+      <div class="table-preview-wrapper">
+        <span class="section-subtitle">Holdout Predictions (Top 5):</span>
+        <div class="table-scroll-container">
+          <table class="data-table"><thead><tr><th>Row</th><th>Actual</th><th>Predicted</th><th>Details</th></tr></thead><tbody><tr><td>56</td><td>0</td><td><strong>0</strong></td><td>95% / 5%</td></tr><tr><td>0</td><td>0</td><td><strong>0</strong></td><td>94% / 6%</td></tr><tr><td>57</td><td>0</td><td><strong>0</strong></td><td>98% / 2%</td></tr><tr><td>24</td><td>0</td><td><strong>0</strong></td><td>69% / 31%</td></tr><tr><td>21</td><td>0</td><td><strong>0</strong></td><td>94% / 6%</td></tr></tbody></table>
+        </div>
+      </div>
+      <div class="narration-block">### 1. Executive Summary<br>The evaluation assesses the TabPFN classification model on the task of predicting binary diabetes status (<code class="inline-code">has_diabetes</code>) using clinical biomarkers (<code class="inline-code">age</code>, <code class="inline-code">bmi</code>, <code class="inline-code">glucose_level</code>, <code class="inline-code">insulin</code>, and <code class="inline-code">blood_pressure</code>). The dataset contains a total of 120 rows and 7 columns, split into 96 training samples and 24 holdout cases. TabPFN successfully outperforms the naive majority-class baseline, achieving an accuracy of 0.8333 compared to the baseline's 0.6667, representing a positive accuracy lift (delta) of 0.1666. Log loss is also improved, dropping from 0.6375 to 0.3132 (a delta of -0.3243).<br><br>### 2. Model Performance vs. Baseline<br>- <strong>Evaluation Metric (Accuracy)</strong>:<br>  - <strong>Baseline Accuracy</strong>: 0.6667<br>  - <strong>TabPFN Accuracy</strong>: 0.8333<br>  - <strong>Accuracy Lift</strong>: +0.1666<br>- <strong>Probabilistic Error (Log Loss)</strong>:<br>  - <strong>Baseline Log Loss</strong>: 0.6375<br>  - <strong>TabPFN Log Loss</strong>: 0.3132<br>  - <strong>Log Loss Reduction</strong>: -0.3243<br><br>TabPFN surpasses the naive majority predictor, demonstrating genuine predictive utility beyond simple frequency guessing on this clinical split.<br><br>### 3. Uncertainty &amp; Sample Analysis<br>TabPFN provides calibrated probabilities for its classifications. Examining the provided sample predictions highlights varying degrees of model confidence:<br>- <strong>High-Confidence Correct Predictions</strong>: For row index 10 (<code class="inline-code">age</code>: 50.0, <code class="inline-code">bmi</code>: 32.3, <code class="inline-code">glucose_level</code>: 74.2, <code class="inline-code">insulin</code>: 111.2, <code class="inline-code">blood_pressure</code>: 79.0), the model correctly predicts class <code class="inline-code">0</code> with a high probability of 0.9945 (and 0.0055 for class 1). Similarly, row index 57 shows a strong confidence of 0.9755 for class <code class="inline-code">0</code>.<br>- <strong>Lower-Confidence / Boundary Predictions</strong>: For row index 105 (<code class="inline-code">age</code>: 64.0, <code class="inline-code">bmi</code>: 23.5, <code class="inline-code">glucose_level</code>: 132.5, <code class="inline-code">insulin</code>: 67.3, <code class="inline-code">blood_pressure</code>: 77.0), the model predicts class <code class="inline-code">0</code> but exhibits much higher uncertainty, assigning a probability of 0.5395 to class <code class="inline-code">0</code> and 0.4605 to class <code class="inline-code">1</code>. Row index 24 likewise shows reduced certainty with a class <code class="inline-code">0</code> probability of 0.6927 against 0.3073 for class <code class="inline-code">1</code>. These probabilities reflect appropriate calibration where feature combinations sit closer to decision boundaries.<br><br>### 4. Caveats &amp; Limitations<br>- <strong>Small Dataset Caveat</strong>: The entire dataset consists of only 120 total rows (with 24 cases evaluated in the holdout set). Because the total row count is well under 100 rows per class magnitude and below 100 overall rows in standard statistical interpretation (specifically, total rows = 120, holdout = 24), evaluation variance is high. Confidence intervals around this 83.33% accuracy metric are wide, and performance estimates may be sensitive to the specific random seed (42) used for the random split. <br>- <strong>Practical Takeaway</strong>: While TabPFN cleanly outperforms the naive baseline on this 24-sample holdout, validation on a larger, independent clinical cohort is strongly advised before downstream operational deployment.</div>
+    </div></div>
+
+        <!-- In-flight progress & timeout banner -->
+        <div id="in-flight-container" class="in-flight-container hidden">
+          <div class="spinner"></div>
+          <span id="in-flight-text" class="in-flight-text">TabPFN is training...</span>
+          <button id="btn-retry-timeout" class="btn btn-xs btn-outline-warning hidden">Retry</button>
+        </div>
+
+        <!-- Chat Input Bar -->
+        <div class="chat-input-bar">
+          <form id="chat-form" class="chat-form">
+            <textarea id="chat-input" class="chat-input" rows="1" placeholder="Ask Gemini to configure a model, clarify your goal, or change target..." aria-label="Chat input message"></textarea>
+            <button type="submit" id="btn-send" class="btn btn-primary btn-send">
+              <span>Send</span>
+              <span class="send-arrow">→</span>
+            </button>
+          </form>
+          <div class="input-help">Press <kbd>Enter</kbd> to send, <kbd>Shift+Enter</kbd> for newline.</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+
+
+</body></html>

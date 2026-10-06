@@ -1,0 +1,32 @@
+{
+  "holdout_accuracy": 0.7917,
+  "feature_importances": [
+    {
+      "feature": "glucose_level",
+      "importance_mean": 0.2833,
+      "importance_std": 0.1067
+    },
+    {
+      "feature": "age",
+      "importance_mean": 0.0,
+      "importance_std": 0.0
+    },
+    {
+      "feature": "bmi",
+      "importance_mean": -0.0,
+      "importance_std": 0.0417
+    },
+    {
+      "feature": "blood_pressure",
+      "importance_mean": 0.0,
+      "importance_std": 0.0
+    },
+    {
+      "feature": "insulin",
+      "importance_mean": -0.0042,
+      "importance_std": 0.0393
+    }
+  ],
+  "primary_driver": "glucose_level",
+  "secondary_driver": "age"
+}

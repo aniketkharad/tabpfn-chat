@@ -1,0 +1,222 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>tabchat — Local-First TabPFN Assistant</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- System Alert Banners & Modals -->
+  <div id="rate-limit-banner" class="banner banner-warning hidden" role="alert">
+    <div class="banner-content">
+      <span class="banner-icon">⚠️</span>
+      <span id="rate-limit-message">Rate limit hit. Waiting for cooldown...</span>
+    </div>
+  </div>
+
+  <div id="quota-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Quota Exhausted</h3>
+      </div>
+      <div class="modal-body">
+        <p>Daily API budget exhausted. Please resume tomorrow.</p>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-close-quota-modal" class="btn btn-secondary">Acknowledge</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Application Container -->
+  <div id="app" class="app-layout">
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-logo">⚡</span>
+        <h1 class="brand-title">tabchat</h1>
+        <span class="brand-badge">TabPFN-3.5</span>
+        <span id="mock-badge" class="badge badge-mock hidden">Mock Mode</span>
+      </div>
+      <div class="header-status">
+        <div class="status-pill">
+          <span class="status-label">LLM:</span>
+          <span id="concurrency-badge" class="status-val idle">Idle</span>
+        </div>
+        <div class="status-pill">
+          <span class="status-label">Turns:</span>
+          <span id="turns-badge" class="status-val">14/15 remaining</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Two-Pane Workspace -->
+    <main class="workspace-grid">
+      <!-- Left Pane: Data & Status Inspector -->
+      <aside class="pane pane-inspector" id="left-pane">
+        <!-- Session Controls -->
+        <section class="card session-card">
+          <div class="card-header">
+            <h2>Session Status</h2>
+            <button id="btn-reset-session" class="btn btn-xs btn-outline-danger" title="Clear disk state and cookie">
+              Reset Session
+            </button>
+          </div>
+          <div class="session-info">
+            <span class="session-label">Session ID:</span>
+            <code id="session-id-display" class="session-code">fc91cfffda95d9a0258522d9a0b42109</code>
+          </div>
+        </section>
+
+        <!-- Upload Zone -->
+        <section class="card upload-card">
+          <div class="card-header">
+            <h2>Dataset Upload</h2>
+          </div>
+          <div id="drop-zone" class="drop-zone" tabindex="0" role="region" aria-label="CSV file drop zone">
+            <div class="drop-icon">📁</div>
+            <p class="drop-text">Drag &amp; drop your CSV file here</p>
+            <p class="drop-subtext">or</p>
+            <label class="btn btn-sm btn-primary file-browse-label">
+              Browse Files
+              <input type="file" id="file-input" accept=".csv" class="visually-hidden">
+            </label>
+          </div>
+          <div class="limits-notice">
+            <span>Limits:</span> ≤ 200 rows, ≤ 50 columns, cells ≤ 64 chars, max 1 MB.
+          </div>
+          <div class="samples-container">
+            <span class="samples-label">Quick Load Sample:</span>
+            <div class="samples-btn-group">
+              <button type="button" id="btn-sample-churn" class="btn btn-xs btn-sample" title="140 rows, 8 cols (Classification)">
+                ⚡ Churn Sample
+              </button>
+              <button type="button" id="btn-sample-housing" class="btn btn-xs btn-sample" title="120 rows, 7 cols (Regression)">
+                🏡 Housing Sample
+              </button>
+            </div>
+          </div>
+          <!-- Upload Validation Error Callout -->
+          <div id="upload-errors" class="upload-errors hidden" role="alert">
+            <div class="errors-header">
+              <span class="error-icon">❌</span>
+              <strong>Validation Errors:</strong>
+            </div>
+            <ul id="upload-errors-list" class="errors-list"></ul>
+          </div>
+        </section>
+
+        <!-- Dataset Card Component (revealed after upload) -->
+        <section id="dataset-card-section" class="card dataset-card">
+          <div class="card-header">
+            <h2>Dataset Preview</h2>
+            <span id="dataset-shape-badge" class="badge badge-info">120 rows × 6 cols</span>
+          </div>
+          
+          <div class="column-types-wrapper">
+            <span class="section-subtitle">Schema &amp; Types:</span>
+            <div id="column-types-list" class="column-types-list"><div class="col-chip"><span class="col-name">ticket_id</span><span class="col-type type-unknown">unknown</span></div><div class="col-chip"><span class="col-name">feedback_text</span><span class="col-type type-unknown">unknown</span></div><div class="col-chip"><span class="col-name">account_tier</span><span class="col-type type-unknown">unknown</span></div><div class="col-chip"><span class="col-name">monthly_spend</span><span class="col-type type-unknown">unknown</span></div><div class="col-chip"><span class="col-name">tenure_months</span><span class="col-type type-unknown">unknown</span></div><div class="col-chip"><span class="col-name">needs_escalation</span><span class="col-type type-unknown">unknown</span></div></div>
+          </div>
+
+          <div class="table-preview-wrapper">
+            <span class="section-subtitle">Top 5 Preview Rows:</span>
+            <div class="table-scroll-container">
+              <table id="preview-table" class="data-table">
+                <thead id="preview-table-head"><tr><th>ticket_id</th><th>feedback_text</th><th>account_tier</th><th>monthly_spend</th><th>tenure_months</th><th>needs_escalation</th></tr></thead>
+                <tbody id="preview-table-body"><tr><td>TCK_001</td><td>Works as expected after update</td><td>Basic</td><td>263.95</td><td>7</td><td>0</td></tr><tr><td>TCK_002</td><td>Charged incorrect amount no refund</td><td>Enterprise</td><td>1907.52</td><td>29</td><td>1</td></tr><tr><td>TCK_003</td><td>Great onboarding session</td><td>Pro</td><td>748.98</td><td>10</td><td>0</td></tr><tr><td>TCK_004</td><td>Appreciated the helpful guidance</td><td>Enterprise</td><td>964.06</td><td>34</td><td>0</td></tr><tr><td>TCK_005</td><td>Unacceptable downtime demand manager</td><td>Enterprise</td><td>1885.06</td><td>5</td><td>1</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <!-- Right Pane: Interactive Timeline & Workspace -->
+      <section class="pane pane-workspace" id="right-pane">
+        <!-- Chat & Narrative Feed -->
+        <div id="chat-feed" class="chat-feed" role="log" aria-live="polite">
+          <div class="message message-system">
+            <div class="message-content">
+              Welcome to <strong>tabchat</strong>. Upload a CSV table on the left, then describe your target or goal below. Gemini will formulate an analytical plan for TabPFN-3.5.
+            </div>
+          </div>
+        <div class="message message-system"><div class="message-content">Dataset loaded: 120 rows, 6 columns.</div></div><div class="message message-user"><div class="message-content">I want to predict whether a customer ticket needs urgent escalation (needs_escalation) using customer feedback_text, account_tier, monthly_spend, and tenure_months. Exclude ticket_id as it is an ID, and evaluate with balanced accuracy.</div></div><div class="message message-assistant"><div class="message-content">I've configured an analytical plan to predict 'needs_escalation'. Predicting ticket escalation classification using textual feedback and account metrics while excluding the identifier column ticket_id.</div></div><div id="active-plan-card" class="plan-card">
+      <div class="plan-card-header">
+        <span class="plan-title">📋 Proposed Analysis Plan</span>
+        <span class="badge badge-info">CLASSIFICATION</span>
+      </div>
+      <div class="plan-details-grid">
+        <div class="plan-item"><span class="plan-item-label">Target Column</span><span class="plan-item-val">needs_escalation</span></div>
+        <div class="plan-item"><span class="plan-item-label">Validation Split</span><span class="plan-item-val">random (80/20)</span></div>
+        <div class="plan-item"><span class="plan-item-label">Features Included (4)</span><div class="pill-list"><span class="feature-pill">feedback_text</span><span class="feature-pill">account_tier</span><span class="feature-pill">monthly_spend</span><span class="feature-pill">tenure_months</span></div></div>
+        <div class="plan-item"><span class="plan-item-label">Features Excluded (1)</span><div class="pill-list"><span class="feature-pill excluded">ticket_id</span></div></div>
+      </div>
+      <div class="plan-card-actions">
+        <button id="btn-run-tabpfn" class="btn btn-success">🚀 Confirm &amp; Run TabPFN</button>
+        <span class="plan-edit-hint">Want to change features or target? Reply in chat to adjust the plan.</span>
+      </div>
+    </div><div id="active-results-card" class="results-card">
+      <div class="results-header">
+        <span class="results-title">📊 TabPFN-3.5 Evaluation Results</span>
+        <span class="badge badge-info">Holdout N=24</span>
+      </div>
+      <div>
+        <table class="metrics-table"><thead><tr><th>Metric</th><th>TabPFN-3.5</th><th>Baseline</th><th>Lift / Delta</th></tr></thead><tbody><tr><td><strong>ACCURACY</strong></td><td class="metric-val">1</td><td class="metric-val">0.5833</td><td class="metric-val lift-positive">+0.4167</td></tr><tr><td><strong>LOG_LOSS</strong></td><td class="metric-val">0.0275</td><td class="metric-val">0.6801</td><td class="metric-val lift-positive">-0.6526</td></tr></tbody></table>
+      </div>
+      <div class="chart-container">
+        <span class="chart-title">Holdout Prediction Confidences</span>
+        <svg viewBox="0 0 500 134" class="chart-svg">
+        <text x="10" y="25" fill="#94a3b8" font-size="11" font-family="monospace">#7</text>
+        <rect x="50" y="14" width="260" height="14" rx="3" fill="#10b981"></rect>
+        <text x="315" y="25" fill="#e2e8f0" font-size="11" font-weight="bold">100% (0)</text>
+      
+        <text x="10" y="47" fill="#94a3b8" font-size="11" font-family="monospace">#102</text>
+        <rect x="50" y="36" width="260" height="14" rx="3" fill="#10b981"></rect>
+        <text x="315" y="47" fill="#e2e8f0" font-size="11" font-weight="bold">100% (0)</text>
+      
+        <text x="10" y="69" fill="#94a3b8" font-size="11" font-family="monospace">#33</text>
+        <rect x="50" y="58" width="260" height="14" rx="3" fill="#10b981"></rect>
+        <text x="315" y="69" fill="#e2e8f0" font-size="11" font-weight="bold">100% (0)</text>
+      
+        <text x="10" y="91" fill="#94a3b8" font-size="11" font-family="monospace">#0</text>
+        <rect x="50" y="80" width="260" height="14" rx="3" fill="#10b981"></rect>
+        <text x="315" y="91" fill="#e2e8f0" font-size="11" font-weight="bold">100% (0)</text>
+      
+        <text x="10" y="113" fill="#94a3b8" font-size="11" font-family="monospace">#51</text>
+        <rect x="50" y="102" width="260" height="14" rx="3" fill="#10b981"></rect>
+        <text x="315" y="113" fill="#e2e8f0" font-size="11" font-weight="bold">100% (0)</text>
+      </svg>
+      </div>
+      <div class="table-preview-wrapper">
+        <span class="section-subtitle">Holdout Predictions (Top 5):</span>
+        <div class="table-scroll-container">
+          <table class="data-table"><thead><tr><th>Row</th><th>Actual</th><th>Predicted</th><th>Details</th></tr></thead><tbody><tr><td>7</td><td>0</td><td><strong>0</strong></td><td>100% / 0%</td></tr><tr><td>102</td><td>0</td><td><strong>0</strong></td><td>100% / 0%</td></tr><tr><td>33</td><td>0</td><td><strong>0</strong></td><td>100% / 0%</td></tr><tr><td>0</td><td>0</td><td><strong>0</strong></td><td>100% / 0%</td></tr><tr><td>51</td><td>0</td><td><strong>0</strong></td><td>100% / 0%</td></tr></tbody></table>
+        </div>
+      </div>
+      <div class="narration-block">### 1. Executive Summary<br>The evaluation assesses the TabPFN classifier on predicting ticket escalations (<code class="inline-code">needs_escalation</code>) using 4 feature columns (<code class="inline-code">feedback_text</code>, <code class="inline-code">account_tier</code>, <code class="inline-code">monthly_spend</code>, <code class="inline-code">tenure_months</code>) while excluding the identifier column (<code class="inline-code">ticket_id</code>). The model achieved a holdout <strong>accuracy of 1.0000</strong> and a <strong>log loss of 0.0275</strong> on the evaluation split. Comparing this performance directly against the naive majority-class baseline (accuracy of 0.5833, log loss of 0.6801), TabPFN delivers a substantial accuracy lift of <strong>+0.4167</strong> and reduces log loss by <strong>-0.6526</strong>.<br><br>---<br><br>### 2. Model Performance vs. Baseline<br>The classification task compares the trained TabPFN model against a trivial baseline that constantly predicts the majority class:<br>- <strong>Baseline Accuracy</strong>: 0.5833<br>- <strong>TabPFN Accuracy</strong>: 1.0000<br>- <strong>Accuracy Lift (Delta)</strong>: +0.4167<br>- <strong>Baseline Log Loss</strong>: 0.6801<br>- <strong>TabPFN Log Loss</strong>: 0.0275<br>- <strong>Log Loss Reduction (Delta)</strong>: -0.6526<br><br>The model successfully outperforms the naive baseline, demonstrating strong discriminative capability on this classification task.<br><br>---<br><br>### 3. Uncertainty &amp; Sample Analysis<br>The evaluation was conducted on <strong>24 holdout cases</strong> (with a training sample size of 96 rows out of a total dataset size of 120 rows). TabPFN provides calibrated class probabilities alongside its predictions. <br><br>Inspecting the provided <code class="inline-code">sample_predictions</code> highlights the model's high confidence on non-escalated tickets (actual: "0"):<br>- <strong>Row 7</strong> (<code class="inline-code">feedback_text</code>: "Polite representative and clear steps", <code class="inline-code">monthly_spend</code>: 87.72): Predicted class "0" with a probability of <code class="inline-code">0.9999</code>.<br>- <strong>Row 0</strong> (<code class="inline-code">feedback_text</code>: "Works as expected after update", <code class="inline-code">monthly_spend</code>: 263.95): Predicted class "0" with a probability of <code class="inline-code">0.9999</code>.<br>- <strong>Row 80</strong> (<code class="inline-code">feedback_text</code>: "Feature works nicely thank you", <code class="inline-code">monthly_spend</code>: 99.01): Predicted class "0" with a probability of <code class="inline-code">0.9995</code>.<br><br>Across the examined sample instances, the model assigns near-certainty probabilities ($\ge 0.9995$) to the correct class "0" cases, reflecting sharp separation in the evaluated feature space.<br><br>---<br><br>### 4. Caveats &amp; Limitations<br>- <strong>Small Dataset Caveat</strong>: The total dataset contains 120 rows (96 training rows, 24 holdout rows). Because the total row count is close to 100, evaluation variance and confidence intervals are wider. Performance metrics on small test splits like $N=24$ can be sensitive to single-instance shifts.<br>- <strong>Split Strategy</strong>: The evaluation used a <code class="inline-code">random</code> split strategy with a holdout fraction of 0.2 and a random seed of 42. Cross-validation or temporal splitting may be required if feedback records exhibit sequential dependencies.</div>
+    </div></div>
+
+        <!-- In-flight progress & timeout banner -->
+        <div id="in-flight-container" class="in-flight-container hidden">
+          <div class="spinner"></div>
+          <span id="in-flight-text" class="in-flight-text">Still working. TabPFN fits may take up to 60s...</span>
+          <button id="btn-retry-timeout" class="btn btn-xs btn-outline-warning hidden">Retry</button>
+        </div>
+
+        <!-- Chat Input Bar -->
+        <div class="chat-input-bar">
+          <form id="chat-form" class="chat-form">
+            <textarea id="chat-input" class="chat-input" rows="1" placeholder="Ask Gemini to configure a model, clarify your goal, or change target..." aria-label="Chat input message"></textarea>
+            <button type="submit" id="btn-send" class="btn btn-primary btn-send">
+              <span>Send</span>
+              <span class="send-arrow">→</span>
+            </button>
+          </form>
+          <div class="input-help">Press <kbd>Enter</kbd> to send, <kbd>Shift+Enter</kbd> for newline.</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+
+
+</body></html>

@@ -1,0 +1,222 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>tabchat — Local-First TabPFN Assistant</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- System Alert Banners & Modals -->
+  <div id="rate-limit-banner" class="banner banner-warning hidden" role="alert">
+    <div class="banner-content">
+      <span class="banner-icon">⚠️</span>
+      <span id="rate-limit-message">Rate limit hit. Waiting for cooldown...</span>
+    </div>
+  </div>
+
+  <div id="quota-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Quota Exhausted</h3>
+      </div>
+      <div class="modal-body">
+        <p>Daily API budget exhausted. Please resume tomorrow.</p>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-close-quota-modal" class="btn btn-secondary">Acknowledge</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Application Container -->
+  <div id="app" class="app-layout">
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-logo">⚡</span>
+        <h1 class="brand-title">tabchat</h1>
+        <span class="brand-badge">TabPFN-3.5</span>
+        <span id="mock-badge" class="badge badge-mock hidden">Mock Mode</span>
+      </div>
+      <div class="header-status">
+        <div class="status-pill">
+          <span class="status-label">LLM:</span>
+          <span id="concurrency-badge" class="status-val idle">Idle</span>
+        </div>
+        <div class="status-pill">
+          <span class="status-label">Turns:</span>
+          <span id="turns-badge" class="status-val">14/15 remaining</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Two-Pane Workspace -->
+    <main class="workspace-grid">
+      <!-- Left Pane: Data & Status Inspector -->
+      <aside class="pane pane-inspector" id="left-pane">
+        <!-- Session Controls -->
+        <section class="card session-card">
+          <div class="card-header">
+            <h2>Session Status</h2>
+            <button id="btn-reset-session" class="btn btn-xs btn-outline-danger" title="Clear disk state and cookie">
+              Reset Session
+            </button>
+          </div>
+          <div class="session-info">
+            <span class="session-label">Session ID:</span>
+            <code id="session-id-display" class="session-code">a915e663c0a254de2f22563af61c6b28</code>
+          </div>
+        </section>
+
+        <!-- Upload Zone -->
+        <section class="card upload-card">
+          <div class="card-header">
+            <h2>Dataset Upload</h2>
+          </div>
+          <div id="drop-zone" class="drop-zone" tabindex="0" role="region" aria-label="CSV file drop zone">
+            <div class="drop-icon">📁</div>
+            <p class="drop-text">Drag &amp; drop your CSV file here</p>
+            <p class="drop-subtext">or</p>
+            <label class="btn btn-sm btn-primary file-browse-label">
+              Browse Files
+              <input type="file" id="file-input" accept=".csv" class="visually-hidden">
+            </label>
+          </div>
+          <div class="limits-notice">
+            <span>Limits:</span> ≤ 200 rows, ≤ 50 columns, cells ≤ 64 chars, max 1 MB.
+          </div>
+          <div class="samples-container">
+            <span class="samples-label">Quick Load Sample:</span>
+            <div class="samples-btn-group">
+              <button type="button" id="btn-sample-churn" class="btn btn-xs btn-sample" title="140 rows, 8 cols (Classification)">
+                ⚡ Churn Sample
+              </button>
+              <button type="button" id="btn-sample-housing" class="btn btn-xs btn-sample" title="120 rows, 7 cols (Regression)">
+                🏡 Housing Sample
+              </button>
+            </div>
+          </div>
+          <!-- Upload Validation Error Callout -->
+          <div id="upload-errors" class="upload-errors hidden" role="alert">
+            <div class="errors-header">
+              <span class="error-icon">❌</span>
+              <strong>Validation Errors:</strong>
+            </div>
+            <ul id="upload-errors-list" class="errors-list"></ul>
+          </div>
+        </section>
+
+        <!-- Dataset Card Component (revealed after upload) -->
+        <section id="dataset-card-section" class="card dataset-card">
+          <div class="card-header">
+            <h2>Dataset Preview</h2>
+            <span id="dataset-shape-badge" class="badge badge-info">100 rows × 6 cols</span>
+          </div>
+          
+          <div class="column-types-wrapper">
+            <span class="section-subtitle">Schema &amp; Types:</span>
+            <div id="column-types-list" class="column-types-list"><div class="col-chip"><span class="col-name">patient_id</span><span class="col-type type-unknown">unknown</span></div><div class="col-chip"><span class="col-name">age</span><span class="col-type type-unknown">unknown</span></div><div class="col-chip"><span class="col-name">blood_pressure_sys</span><span class="col-type type-unknown">unknown</span></div><div class="col-chip"><span class="col-name">cholesterol</span><span class="col-type type-unknown">unknown</span></div><div class="col-chip"><span class="col-name">glucose</span><span class="col-type type-unknown">unknown</span></div><div class="col-chip"><span class="col-name">treatment_response</span><span class="col-type type-unknown">unknown</span></div></div>
+          </div>
+
+          <div class="table-preview-wrapper">
+            <span class="section-subtitle">Top 5 Preview Rows:</span>
+            <div class="table-scroll-container">
+              <table id="preview-table" class="data-table">
+                <thead id="preview-table-head"><tr><th>patient_id</th><th>age</th><th>blood_pressure_sys</th><th>cholesterol</th><th>glucose</th><th>treatment_response</th></tr></thead>
+                <tbody id="preview-table-body"><tr><td>SYN_001</td><td>59</td><td>130</td><td>231</td><td>95</td><td>0</td></tr><tr><td>SYN_002</td><td>53</td><td>132</td><td>224</td><td>94</td><td>0</td></tr><tr><td>SYN_003</td><td>60</td><td>137</td><td>244</td><td>114</td><td>0</td></tr><tr><td>SYN_004</td><td>69</td><td>140</td><td>257</td><td>120</td><td>0</td></tr><tr><td>SYN_005</td><td>52</td><td>133</td><td>200</td><td>99</td><td>0</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <!-- Right Pane: Interactive Timeline & Workspace -->
+      <section class="pane pane-workspace" id="right-pane">
+        <!-- Chat & Narrative Feed -->
+        <div id="chat-feed" class="chat-feed" role="log" aria-live="polite">
+          <div class="message message-system">
+            <div class="message-content">
+              Welcome to <strong>tabchat</strong>. Upload a CSV table on the left, then describe your target or goal below. Gemini will formulate an analytical plan for TabPFN-3.5.
+            </div>
+          </div>
+        <div class="message message-system"><div class="message-content">Dataset loaded: 100 rows, 6 columns.</div></div><div class="message message-user"><div class="message-content">I want to validate this privacy-preserving synthetic clinical dataset by predicting patient treatment response (treatment_response) from biomarkers age, blood_pressure_sys, cholesterol, and glucose. Exclude patient_id as it is an ID, and evaluate with accuracy.</div></div><div class="message message-assistant"><div class="message-content">I've configured an analytical plan to predict 'treatment_response'. Predicting binary treatment_response using clinical biomarkers while excluding the patient_id identifier.</div></div><div id="active-plan-card" class="plan-card">
+      <div class="plan-card-header">
+        <span class="plan-title">📋 Proposed Analysis Plan</span>
+        <span class="badge badge-info">CLASSIFICATION</span>
+      </div>
+      <div class="plan-details-grid">
+        <div class="plan-item"><span class="plan-item-label">Target Column</span><span class="plan-item-val">treatment_response</span></div>
+        <div class="plan-item"><span class="plan-item-label">Validation Split</span><span class="plan-item-val">random (80/20)</span></div>
+        <div class="plan-item"><span class="plan-item-label">Features Included (4)</span><div class="pill-list"><span class="feature-pill">age</span><span class="feature-pill">blood_pressure_sys</span><span class="feature-pill">cholesterol</span><span class="feature-pill">glucose</span></div></div>
+        <div class="plan-item"><span class="plan-item-label">Features Excluded (1)</span><div class="pill-list"><span class="feature-pill excluded">patient_id</span></div></div>
+      </div>
+      <div class="plan-card-actions">
+        <button id="btn-run-tabpfn" class="btn btn-success">🚀 Confirm &amp; Run TabPFN</button>
+        <span class="plan-edit-hint">Want to change features or target? Reply in chat to adjust the plan.</span>
+      </div>
+    </div><div id="active-results-card" class="results-card">
+      <div class="results-header">
+        <span class="results-title">📊 TabPFN-3.5 Evaluation Results</span>
+        <span class="badge badge-info">Holdout N=20</span>
+      </div>
+      <div>
+        <table class="metrics-table"><thead><tr><th>Metric</th><th>TabPFN-3.5</th><th>Baseline</th><th>Lift / Delta</th></tr></thead><tbody><tr><td><strong>ACCURACY</strong></td><td class="metric-val">0.8</td><td class="metric-val">0.5</td><td class="metric-val lift-positive">+0.3</td></tr><tr><td><strong>LOG_LOSS</strong></td><td class="metric-val">0.4132</td><td class="metric-val">0.6935</td><td class="metric-val lift-positive">-0.2803</td></tr></tbody></table>
+      </div>
+      <div class="chart-container">
+        <span class="chart-title">Holdout Prediction Confidences</span>
+        <svg viewBox="0 0 500 134" class="chart-svg">
+        <text x="10" y="25" fill="#94a3b8" font-size="11" font-family="monospace">#86</text>
+        <rect x="50" y="14" width="237" height="14" rx="3" fill="#10b981"></rect>
+        <text x="292" y="25" fill="#e2e8f0" font-size="11" font-weight="bold">91% (0)</text>
+      
+        <text x="10" y="47" fill="#94a3b8" font-size="11" font-family="monospace">#81</text>
+        <rect x="50" y="36" width="195" height="14" rx="3" fill="#10b981"></rect>
+        <text x="250" y="47" fill="#e2e8f0" font-size="11" font-weight="bold">75% (0)</text>
+      
+        <text x="10" y="69" fill="#94a3b8" font-size="11" font-family="monospace">#93</text>
+        <rect x="50" y="58" width="145" height="14" rx="3" fill="#10b981"></rect>
+        <text x="200" y="69" fill="#e2e8f0" font-size="11" font-weight="bold">56% (0)</text>
+      
+        <text x="10" y="91" fill="#94a3b8" font-size="11" font-family="monospace">#22</text>
+        <rect x="50" y="80" width="160" height="14" rx="3" fill="#10b981"></rect>
+        <text x="215" y="91" fill="#e2e8f0" font-size="11" font-weight="bold">62% (0)</text>
+      
+        <text x="10" y="113" fill="#94a3b8" font-size="11" font-family="monospace">#53</text>
+        <rect x="50" y="102" width="227" height="14" rx="3" fill="#10b981"></rect>
+        <text x="282" y="113" fill="#e2e8f0" font-size="11" font-weight="bold">87% (0)</text>
+      </svg>
+      </div>
+      <div class="table-preview-wrapper">
+        <span class="section-subtitle">Holdout Predictions (Top 5):</span>
+        <div class="table-scroll-container">
+          <table class="data-table"><thead><tr><th>Row</th><th>Actual</th><th>Predicted</th><th>Details</th></tr></thead><tbody><tr><td>86</td><td>0</td><td><strong>0</strong></td><td>91% / 9%</td></tr><tr><td>81</td><td>0</td><td><strong>0</strong></td><td>75% / 25%</td></tr><tr><td>93</td><td>0</td><td><strong>0</strong></td><td>56% / 44%</td></tr><tr><td>22</td><td>0</td><td><strong>0</strong></td><td>62% / 38%</td></tr><tr><td>53</td><td>0</td><td><strong>0</strong></td><td>87% / 13%</td></tr></tbody></table>
+        </div>
+      </div>
+      <div class="narration-block">### Executive Summary<br>This report evaluates the TabPFN classification model on the clinical dataset (<code class="inline-code">treatment_response</code>) using 4 clinical biomarker features (<code class="inline-code">age</code>, <code class="inline-code">blood_pressure_sys</code>, <code class="inline-code">cholesterol</code>, <code class="inline-code">glucose</code>) while excluding the <code class="inline-code">patient_id</code> identifier. The model was trained on 80 samples and evaluated on an exact holdout sample size of 20 cases. TabPFN successfully outperforms the naive majority-class baseline, yielding a substantial positive accuracy lift and reduced log loss.<br><br>---<br><br>### Model Performance vs. Baseline<br>TabPFN's performance is measured against a naive baseline that always predicts the majority class:<br>- <strong>Baseline Accuracy</strong>: 0.5000 | <strong>Baseline Log Loss</strong>: 0.6935<br>- <strong>TabPFN Accuracy</strong>: 0.8000 | <strong>TabPFN Log Loss</strong>: 0.4132<br>- <strong>Performance Lift (Delta)</strong>: +0.3000 accuracy improvement | -0.2803 reduction in log loss<br><br>The model effectively learns from the clinical indicators to distinguish treatment responses, outperforming a random or trivial majority predictor by 30 percentage points.<br><br>---<br><br>### Uncertainty &amp; Sample Analysis<br>TabPFN provides calibrated class probabilities for each prediction, allowing for an inspection of model confidence:<br>- <strong>High-Confidence Correct Predictions</strong>: For row index 3 (age 69, blood pressure 140, cholesterol 257, glucose 120), the model correctly predicted class <code class="inline-code">0</code> with high confidence (probability 0.9450). Similarly, row index 65 (age 68, blood pressure 146, cholesterol 229, glucose 110) yielded a class <code class="inline-code">0</code> probability of 0.9391.<br>- <strong>Lower-Confidence/Borderline Predictions</strong>: Model uncertainty increases when feature values sit near decision boundaries. For example, row index 93 (age 51, blood pressure 125, cholesterol 223, glucose 115) resulted in a class <code class="inline-code">0</code> probability of 0.5562 and a class <code class="inline-code">1</code> probability of 0.4438, reflecting higher epistemic/aleatoric uncertainty for this patient profile.<br><br>---<br><br>### Caveats &amp; Limitations<br>- <strong>Small Dataset Caveat</strong>: The total dataset contains exactly 100 rows (<code class="inline-code">train_size</code> = 80, <code class="inline-code">holdout_size</code> = 20). Because the total row count is fewer than 100, <strong>evaluation variance and confidence intervals are wider on this small dataset</strong>. Performance metrics on a 20-case holdout may not fully generalize to larger unseen cohorts without further validation.<br>- <strong>Split Constraints</strong>: The data was split using a random strategy (random seed 42), meaning potential clustering or temporal dependencies in patient records were not explicitly controlled for.</div>
+    </div></div>
+
+        <!-- In-flight progress & timeout banner -->
+        <div id="in-flight-container" class="in-flight-container hidden">
+          <div class="spinner"></div>
+          <span id="in-flight-text" class="in-flight-text">Still working. TabPFN fits may take up to 60s...</span>
+          <button id="btn-retry-timeout" class="btn btn-xs btn-outline-warning hidden">Retry</button>
+        </div>
+
+        <!-- Chat Input Bar -->
+        <div class="chat-input-bar">
+          <form id="chat-form" class="chat-form">
+            <textarea id="chat-input" class="chat-input" rows="1" placeholder="Ask Gemini to configure a model, clarify your goal, or change target..." aria-label="Chat input message"></textarea>
+            <button type="submit" id="btn-send" class="btn btn-primary btn-send">
+              <span>Send</span>
+              <span class="send-arrow">→</span>
+            </button>
+          </form>
+          <div class="input-help">Press <kbd>Enter</kbd> to send, <kbd>Shift+Enter</kbd> for newline.</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+
+
+</body></html>

@@ -1,0 +1,222 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>tabchat — Local-First TabPFN Assistant</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- System Alert Banners & Modals -->
+  <div id="rate-limit-banner" class="banner banner-warning hidden" role="alert">
+    <div class="banner-content">
+      <span class="banner-icon">⚠️</span>
+      <span id="rate-limit-message">Rate limit hit. Waiting for cooldown...</span>
+    </div>
+  </div>
+
+  <div id="quota-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Quota Exhausted</h3>
+      </div>
+      <div class="modal-body">
+        <p>Daily API budget exhausted. Please resume tomorrow.</p>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-close-quota-modal" class="btn btn-secondary">Acknowledge</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Application Container -->
+  <div id="app" class="app-layout">
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-logo">⚡</span>
+        <h1 class="brand-title">tabchat</h1>
+        <span class="brand-badge">TabPFN-3.5</span>
+        <span id="mock-badge" class="badge badge-mock hidden">Mock Mode</span>
+      </div>
+      <div class="header-status">
+        <div class="status-pill">
+          <span class="status-label">LLM:</span>
+          <span id="concurrency-badge" class="status-val idle">Idle</span>
+        </div>
+        <div class="status-pill">
+          <span class="status-label">Turns:</span>
+          <span id="turns-badge" class="status-val">14/15 remaining</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Two-Pane Workspace -->
+    <main class="workspace-grid">
+      <!-- Left Pane: Data & Status Inspector -->
+      <aside class="pane pane-inspector" id="left-pane">
+        <!-- Session Controls -->
+        <section class="card session-card">
+          <div class="card-header">
+            <h2>Session Status</h2>
+            <button id="btn-reset-session" class="btn btn-xs btn-outline-danger" title="Clear disk state and cookie">
+              Reset Session
+            </button>
+          </div>
+          <div class="session-info">
+            <span class="session-label">Session ID:</span>
+            <code id="session-id-display" class="session-code">98e3d5e92e423fc7256d628cbae29e1d</code>
+          </div>
+        </section>
+
+        <!-- Upload Zone -->
+        <section class="card upload-card">
+          <div class="card-header">
+            <h2>Dataset Upload</h2>
+          </div>
+          <div id="drop-zone" class="drop-zone" tabindex="0" role="region" aria-label="CSV file drop zone">
+            <div class="drop-icon">📁</div>
+            <p class="drop-text">Drag &amp; drop your CSV file here</p>
+            <p class="drop-subtext">or</p>
+            <label class="btn btn-sm btn-primary file-browse-label">
+              Browse Files
+              <input type="file" id="file-input" accept=".csv" class="visually-hidden">
+            </label>
+          </div>
+          <div class="limits-notice">
+            <span>Limits:</span> ≤ 200 rows, ≤ 50 columns, cells ≤ 64 chars, max 1 MB.
+          </div>
+          <div class="samples-container">
+            <span class="samples-label">Quick Load Sample:</span>
+            <div class="samples-btn-group">
+              <button type="button" id="btn-sample-churn" class="btn btn-xs btn-sample" title="140 rows, 8 cols (Classification)">
+                ⚡ Churn Sample
+              </button>
+              <button type="button" id="btn-sample-housing" class="btn btn-xs btn-sample" title="120 rows, 7 cols (Regression)">
+                🏡 Housing Sample
+              </button>
+            </div>
+          </div>
+          <!-- Upload Validation Error Callout -->
+          <div id="upload-errors" class="upload-errors hidden" role="alert">
+            <div class="errors-header">
+              <span class="error-icon">❌</span>
+              <strong>Validation Errors:</strong>
+            </div>
+            <ul id="upload-errors-list" class="errors-list"></ul>
+          </div>
+        </section>
+
+        <!-- Dataset Card Component (revealed after upload) -->
+        <section id="dataset-card-section" class="card dataset-card">
+          <div class="card-header">
+            <h2>Dataset Preview</h2>
+            <span id="dataset-shape-badge" class="badge badge-info">144 rows × 4 cols</span>
+          </div>
+          
+          <div class="column-types-wrapper">
+            <span class="section-subtitle">Schema &amp; Types:</span>
+            <div id="column-types-list" class="column-types-list"><div class="col-chip"><span class="col-name">date</span><span class="col-type type-unknown">unknown</span></div><div class="col-chip"><span class="col-name">year</span><span class="col-type type-unknown">unknown</span></div><div class="col-chip"><span class="col-name">month_num</span><span class="col-type type-unknown">unknown</span></div><div class="col-chip"><span class="col-name">passengers</span><span class="col-type type-unknown">unknown</span></div></div>
+          </div>
+
+          <div class="table-preview-wrapper">
+            <span class="section-subtitle">Top 5 Preview Rows:</span>
+            <div class="table-scroll-container">
+              <table id="preview-table" class="data-table">
+                <thead id="preview-table-head"><tr><th>date</th><th>year</th><th>month_num</th><th>passengers</th></tr></thead>
+                <tbody id="preview-table-body"><tr><td>1949-01-01</td><td>1949</td><td>1</td><td>112</td></tr><tr><td>1949-02-01</td><td>1949</td><td>2</td><td>118</td></tr><tr><td>1949-03-01</td><td>1949</td><td>3</td><td>132</td></tr><tr><td>1949-04-01</td><td>1949</td><td>4</td><td>129</td></tr><tr><td>1949-05-01</td><td>1949</td><td>5</td><td>121</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <!-- Right Pane: Interactive Timeline & Workspace -->
+      <section class="pane pane-workspace" id="right-pane">
+        <!-- Chat & Narrative Feed -->
+        <div id="chat-feed" class="chat-feed" role="log" aria-live="polite">
+          <div class="message message-system">
+            <div class="message-content">
+              Welcome to <strong>tabchat</strong>. Upload a CSV table on the left, then describe your target or goal below. Gemini will formulate an analytical plan for TabPFN-3.5.
+            </div>
+          </div>
+        <div class="message message-system"><div class="message-content">Dataset loaded: 144 rows, 4 columns.</div></div><div class="message message-user"><div class="message-content">I want to forecast international airline passenger demand (passengers) forward in time based on year and month_num. Use date for chronological validation split to evaluate future holdout accuracy with RMSE.</div></div><div class="message message-assistant"><div class="message-content">I've configured an analytical plan to predict 'passengers'. Forecasting continuous passenger demand using year and month_num features with a chronological split on date evaluated via RMSE.</div></div><div id="active-plan-card" class="plan-card">
+      <div class="plan-card-header">
+        <span class="plan-title">📋 Proposed Analysis Plan</span>
+        <span class="badge badge-info">REGRESSION</span>
+      </div>
+      <div class="plan-details-grid">
+        <div class="plan-item"><span class="plan-item-label">Target Column</span><span class="plan-item-val">passengers</span></div>
+        <div class="plan-item"><span class="plan-item-label">Validation Split</span><span class="plan-item-val">chronological (80/20)</span></div>
+        <div class="plan-item"><span class="plan-item-label">Features Included (2)</span><div class="pill-list"><span class="feature-pill">year</span><span class="feature-pill">month_num</span></div></div>
+        <div class="plan-item"><span class="plan-item-label">Features Excluded (1)</span><div class="pill-list"><span class="feature-pill excluded">date</span></div></div>
+      </div>
+      <div class="plan-card-actions">
+        <button id="btn-run-tabpfn" class="btn btn-success">🚀 Confirm &amp; Run TabPFN</button>
+        <span class="plan-edit-hint">Want to change features or target? Reply in chat to adjust the plan.</span>
+      </div>
+    </div><div id="active-results-card" class="results-card">
+      <div class="results-header">
+        <span class="results-title">📊 TabPFN-3.5 Evaluation Results</span>
+        <span class="badge badge-info">Holdout N=29</span>
+      </div>
+      <div>
+        <table class="metrics-table"><thead><tr><th>Metric</th><th>TabPFN-3.5</th><th>Baseline</th><th>Lift / Delta</th></tr></thead><tbody><tr><td><strong>RMSE</strong></td><td class="metric-val">16.7262</td><td class="metric-val">215.0573</td><td class="metric-val lift-positive">-198.3311</td></tr><tr><td><strong>R2</strong></td><td class="metric-val">0.9542</td><td class="metric-val">-6.5763</td><td class="metric-val lift-positive">+7.5305</td></tr></tbody></table>
+      </div>
+      <div class="chart-container">
+        <span class="chart-title">Holdout Prediction Confidences</span>
+        <svg viewBox="0 0 500 134" class="chart-svg">
+        <text x="10" y="25" fill="#94a3b8" font-size="11" font-family="monospace">#115</text>
+        <rect x="50" y="14" width="208" height="14" rx="3" fill="#f59e0b"></rect>
+        <text x="263" y="25" fill="#e2e8f0" font-size="11" font-weight="bold">80% (481.4871520996094)</text>
+      
+        <text x="10" y="47" fill="#94a3b8" font-size="11" font-family="monospace">#116</text>
+        <rect x="50" y="36" width="208" height="14" rx="3" fill="#f59e0b"></rect>
+        <text x="263" y="47" fill="#e2e8f0" font-size="11" font-weight="bold">80% (417.36236572265625)</text>
+      
+        <text x="10" y="69" fill="#94a3b8" font-size="11" font-family="monospace">#117</text>
+        <rect x="50" y="58" width="208" height="14" rx="3" fill="#f59e0b"></rect>
+        <text x="263" y="69" fill="#e2e8f0" font-size="11" font-weight="bold">80% (361.56982421875)</text>
+      
+        <text x="10" y="91" fill="#94a3b8" font-size="11" font-family="monospace">#118</text>
+        <rect x="50" y="80" width="208" height="14" rx="3" fill="#f59e0b"></rect>
+        <text x="263" y="91" fill="#e2e8f0" font-size="11" font-weight="bold">80% (316.3421630859375)</text>
+      
+        <text x="10" y="113" fill="#94a3b8" font-size="11" font-family="monospace">#119</text>
+        <rect x="50" y="102" width="208" height="14" rx="3" fill="#f59e0b"></rect>
+        <text x="263" y="113" fill="#e2e8f0" font-size="11" font-weight="bold">80% (357.6119689941406)</text>
+      </svg>
+      </div>
+      <div class="table-preview-wrapper">
+        <span class="section-subtitle">Holdout Predictions (Top 5):</span>
+        <div class="table-scroll-container">
+          <table class="data-table"><thead><tr><th>Row</th><th>Actual</th><th>Predicted</th><th>Details</th></tr></thead><tbody><tr><td>115</td><td>505</td><td><strong>481.4871520996094</strong></td><td>q10: 460.4456, q90: 503.4235</td></tr><tr><td>116</td><td>404</td><td><strong>417.36236572265625</strong></td><td>q10: 400.5337, q90: 433.9193</td></tr><tr><td>117</td><td>359</td><td><strong>361.56982421875</strong></td><td>q10: 346.9053, q90: 376.5903</td></tr><tr><td>118</td><td>310</td><td><strong>316.3421630859375</strong></td><td>q10: 301.1669, q90: 332.1656</td></tr><tr><td>119</td><td>337</td><td><strong>357.6119689941406</strong></td><td>q10: 340.75, q90: 375.3429</td></tr></tbody></table>
+        </div>
+      </div>
+      <div class="narration-block">### Executive Summary<br>This report evaluates the performance of the TabPFN regression model in forecasting continuous passenger demand (<code class="inline-code">passengers</code>) based on the <code class="inline-code">year</code> and <code class="inline-code">month_num</code> features. Using a chronological split, the dataset of 144 total rows was divided into 115 training rows and 29 holdout cases. TabPFN achieved a Root Mean Squared Error (RMSE) of <strong>16.7262</strong> and an $R^2$ of <strong>0.9542</strong>, substantially outperforming the trivial mean-target baseline.<br><br>---<br><br>### Model Performance vs. Baseline<br>The model's predictions are compared against a naive baseline (mean-target predictor) evaluated on the exact same holdout split:<br><br><em> <strong>Baseline Metrics</strong>: <br>  </em> RMSE: <strong>215.0573</strong><br>  <em> $R^2$: <strong>-6.5763</strong><br></em> <strong>TabPFN Model Metrics</strong>: <br>  <em> RMSE: <strong>16.7262</strong><br>  </em> $R^2$: <strong>0.9542</strong><br><em> <strong>Delta / Lift</strong>: <br>  </em> RMSE Error Reduction: <strong>-198.3311</strong> (a massive reduction in error)<br>  <em> $R^2$ Improvement: <strong>+7.5305</strong> (shifting from severe underperformance to explaining 95.42% of the variance)<br><br>TabPFN successfully captures the underlying trend and seasonal patterns, easily beating the naive baseline.<br><br>---<br><br>### Uncertainty &amp; Sample Analysis<br>Prediction intervals (80% coverage, bounded by <code class="inline-code">q10</code> and <code class="inline-code">q90</code>) provide calibrated uncertainty estimates for individual forecasts:<br><br></em> <strong>High Confidence &amp; Accuracy</strong>: For row index 117 (Year: 1958, Month: 10), the actual passenger count was <strong>359.0</strong>, and the model predicted <strong>361.5698</strong> with a tight interval from <strong>346.9053</strong> (<code class="inline-code">q10</code>) to <strong>376.5903</strong> (<code class="inline-code">q90</code>), demonstrating high precision and appropriate certainty.<br><em> <strong>Wider Uncertainty</strong>: For row index 120 (Year: 1959, Month: 1), the actual value was <strong>360.0</strong> and the prediction was <strong>382.0495</strong>. The model expressed higher uncertainty, widening the 80% interval from <strong>320.9189</strong> (<code class="inline-code">q10</code>) to <strong>445.8511</strong> (<code class="inline-code">q90</code>), correctly reflecting the difficulty of extrapolating into a new yearly cycle.<br></em> <strong>Minor Errors</strong>: For row index 119 (Year: 1958, Month: 12), the actual value was <strong>337.0</strong> against a prediction of <strong>357.6120</strong> (interval: <strong>340.75</strong> to <strong>375.3429</strong>), where the actual fell just outside the lower bound of the 80% prediction interval.<br><br>---<br><br>### Caveats &amp; Limitations<br><em> <strong>Dataset Size Caveat</strong>: The total dataset contains 144 rows (with 29 rows in the holdout set). Because the total row count is relatively small, evaluation variance and confidence intervals are wider than they would be on a large-scale dataset. <br></em> <strong>Chronological Split Constraints</strong>: The evaluation relies on a chronological split (<code class="inline-code">split_column: "date"</code>, holdout fraction 0.2). Because time-series data often exhibits non-stationarity or trend shifts outside the training window, performance on future unseen periods should be monitored continuously in production settings.</div>
+    </div></div>
+
+        <!-- In-flight progress & timeout banner -->
+        <div id="in-flight-container" class="in-flight-container hidden">
+          <div class="spinner"></div>
+          <span id="in-flight-text" class="in-flight-text">Still working. TabPFN fits may take up to 60s...</span>
+          <button id="btn-retry-timeout" class="btn btn-xs btn-outline-warning hidden">Retry</button>
+        </div>
+
+        <!-- Chat Input Bar -->
+        <div class="chat-input-bar">
+          <form id="chat-form" class="chat-form">
+            <textarea id="chat-input" class="chat-input" rows="1" placeholder="Ask Gemini to configure a model, clarify your goal, or change target..." aria-label="Chat input message"></textarea>
+            <button type="submit" id="btn-send" class="btn btn-primary btn-send">
+              <span>Send</span>
+              <span class="send-arrow">→</span>
+            </button>
+          </form>
+          <div class="input-help">Press <kbd>Enter</kbd> to send, <kbd>Shift+Enter</kbd> for newline.</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+
+
+</body></html>

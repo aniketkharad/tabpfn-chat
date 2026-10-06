@@ -218,13 +218,69 @@ Current Status: **100% Complete. Hardened, Fully Tested (84/84 passing), CLI Rep
    - Log loss: **0.1615** vs baseline **0.6906** (Delta: **-0.5291**).
    - Grounded narrative generated live with Gemini Narrator.
    - Captured artifacts: `classification_dashboard.png`, `classification_results_card.png`, `classification_session.html`, `replay_audit.txt`, and `churn_sample.csv`.
+2. **Demo 02: Continuous Regression & Quantiles (`demos/02_regression/`)**:
+   - Automated via Playwright with system Google Chrome.
+   - Evaluated on `housing_sample.csv` (120 rows × 7 cols).
+   - Conversational intent handled live with Gemini Planner (`gemini-3.5-flash-lite`); configured chronological split on `sold_date`.
+   - Executed live against Prior Labs TabPFN-3.5 API with `output_type='quantiles'`.
+   - Model RMSE: **30.8973** vs mean baseline **93.6386** (Delta: **-62.7413** error reduction).
+   - Model $R^2$: **0.8406** vs mean baseline **-0.4642** (Lift: **+1.3048**).
+   - Grounded narrative generated live with Gemini Narrator assessing $q_{10}$–$q_{90}$ predictive interval uncertainty.
+   - Captured artifacts: `regression_dashboard.png`, `regression_results_card.png`, `regression_session.html`, `replay_audit.txt`, and `housing_sample.csv`.
+3. **Demo 03: Time-Series Forecasting (`demos/03_time_series_forecasting/`)**:
+   - Automated via Playwright with system Google Chrome.
+   - Evaluated on `air_passengers.csv` (144 rows × 4 cols; canonical Box-Jenkins dataset).
+   - Conversational intent handled live with Gemini Planner (`gemini-3.5-flash-lite`); configured chronological split on `date`.
+   - Executed live against Prior Labs TabPFN-3.5 API.
+   - Model RMSE: **16.7262** vs mean baseline **215.0573** (Delta: **-198.3311** error reduction).
+   - Model $R^2$: **0.9542** vs mean baseline **-6.5763** (Lift: **+7.5305**).
+   - Grounded narrative generated live with Gemini Narrator assessing trend extrapolation and $q_{10}$–$q_{90}$ predictive interval uncertainty.
+   - Captured artifacts: `forecasting_dashboard.png`, `forecasting_results_card.png`, `forecasting_session.html`, `replay_audit.txt`, and `air_passengers.csv`.
+4. **Demo 04: Anomaly & Rare Event Detection (`demos/04_anomaly_detection/`)**:
+   - Automated via Playwright with system Google Chrome.
+   - Evaluated on `equipment_anomalies.csv` (120 rows × 7 cols; ~6.7% rare failures).
+   - Conversational intent handled live with Gemini Planner (`gemini-3.5-flash-lite`); excluded `sensor_id` and targeted `roc_auc`.
+   - Executed live against Prior Labs TabPFN-3.5 API.
+   - Model Accuracy: **1.0000** (100.0%) vs majority baseline **0.9167** (Lift: **+0.0833**).
+   - Log Loss: **0.0001** vs majority baseline **0.2902** (Delta: **-0.2901**).
+   - Grounded narrative generated live with Gemini Narrator assessing rare anomaly discrimination, sample probabilities, and class imbalance trade-offs.
+   - Captured artifacts: `anomaly_dashboard.png`, `anomaly_results_card.png`, `anomaly_session.html`, `replay_audit.txt`, and `equipment_anomalies.csv`.
+5. **Demo 05: Data Generation & Synthetic Validation (`demos/05_data_generation/`)**:
+   - Automated via Playwright with system Google Chrome.
+   - Seeded from `patient_seed.csv` (15 real clinical trials); synthesized 100 privacy-preserving patient records (`synthetic_patients.csv`).
+   - Conversational intent handled live with Gemini Planner (`gemini-3.5-flash-lite`); excluded `patient_id` and targeted `accuracy`.
+   - Executed live against Prior Labs TabPFN-3.5 API.
+   - Model Accuracy: **0.8000** (80.0%) vs majority baseline **0.5000** (Lift: **+0.3000**).
+   - Log Loss: **0.4132** vs majority baseline **0.6935** (Delta: **-0.2803**).
+   - Grounded narrative generated live with Gemini Narrator confirming synthetic feature-target signal fidelity and privacy preservation.
+   - Captured artifacts: `generation_dashboard.png`, `generation_results_card.png`, `generation_session.html`, `replay_audit.txt`, `synthetic_patients.csv`, and `patient_seed.csv`.
+6. **Demo 06: Context-Aware Text Integration (`demos/06_text_integration/`)**:
+   - Automated via Playwright with system Google Chrome.
+   - Evaluated on `customer_feedback_escalation.csv` (120 rows × 6 cols; natural language text + structured finances).
+   - Conversational intent handled live with Gemini Planner (`gemini-3.5-flash-lite`); incorporated `feedback_text`, excluded `ticket_id`, targeted `balanced_accuracy`.
+   - Executed live against Prior Labs TabPFN-3.5 API with native text transformer embeddings.
+   - Model Accuracy: **1.0000** (100.0%) vs majority baseline **0.5833** (Lift: **+0.4167**).
+   - Log Loss: **0.0275** vs majority baseline **0.6801** (Delta: **-0.6526**).
+   - Grounded narrative generated live with Gemini Narrator explaining multimodal semantic text and financial attribute synergy.
+   - Captured artifacts: `text_integration_dashboard.png`, `text_integration_results_card.png`, `text_integration_session.html`, `replay_audit.txt`, and `customer_feedback_escalation.csv`.
+
+7. **Demo 07: Interpretability & Feature Attribution (`demos/07_interpretability/`)**:
+   - Automated via Playwright with system Google Chrome.
+   - Evaluated on `medical_diagnostics.csv` (120 rows × 7 cols; clinical diabetes diagnosis from biomarkers).
+   - Conversational intent handled live with Gemini Planner (`gemini-3.5-flash-lite`); incorporated 5 clinical biomarkers, excluded `patient_id`, targeted `accuracy`.
+   - Executed live against Prior Labs TabPFN-3.5 API.
+   - Model Accuracy: **0.8333** (83.33%) vs majority baseline **0.6667** (Lift: **+0.1666**).
+   - Log Loss: **0.3132** vs majority baseline **0.6375** (Delta: **-0.3243**).
+   - Grounded narrative generated live with Gemini Narrator assessing clinical decision boundaries and calibrated prediction confidence.
+   - Holdout permutation feature importance measured directly with TabPFN: `glucose_level` identified as dominant primary driver (+0.2833 ± 0.1067 accuracy drop when permuted), followed by `age` and `blood_pressure`.
+   - Captured artifacts: `interpretability_dashboard.png`, `interpretability_results_card.png`, `interpretability_session.html`, `replay_audit.txt`, `feature_importance.json`, and `medical_diagnostics.csv`.
 
 ---
 
 ## Status Summary
 
-- **Total Tasks**: Prompts 1 through 6 Complete; Demo 01 (Classification) executed and verified live (100%).
-- **Automated Tests**: 84 passed, 0 failures, 0 warnings.
+- **Total Tasks**: Prompts 1 through 6 Complete; Demos 01 through 07 executed and verified live. Demo 08 (Fine Tuning) is up next.
+- **Automated Tests**: 84 passed, 0 failures.
 - **Frontend Size**: ~13.5 KB gzipped (well within 60 KB budget).
 - **Backend Idle RSS**: < 75 MB (well within 256 MB budget).
 - **External Dependencies**: Zero runtime bloat, pure FastAPI + pydantic-settings.

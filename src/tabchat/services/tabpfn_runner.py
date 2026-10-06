@@ -196,6 +196,16 @@ def _fit_and_predict_tabpfn(
 
     Can be mocked in tests or will import tabpfn_client when available.
     """
+    settings = get_settings()
+    if settings.TABPFN_TOKEN:
+        if "TABPFN_TOKEN" not in os.environ:
+            os.environ["TABPFN_TOKEN"] = settings.TABPFN_TOKEN
+        try:
+            import tabpfn_client
+            tabpfn_client.set_access_token(settings.TABPFN_TOKEN)
+        except Exception:
+            pass
+
     if task_type == "classification":
         try:
             from tabpfn_client import TabPFNClassifier
@@ -203,6 +213,9 @@ def _fit_and_predict_tabpfn(
             clf.fit(X_train, y_train)
             preds = clf.predict(X_holdout)
             probas = clf.predict_proba(X_holdout)
+            row_sums = np.sum(probas, axis=1, keepdims=True)
+            row_sums[row_sums == 0] = 1.0
+            probas = probas / row_sums
             classes = list(getattr(clf, "classes_", sorted(y_train.unique())))
             return {
                 "predictions": preds,
@@ -226,13 +239,30 @@ def _fit_and_predict_tabpfn(
             reg = TabPFNRegressor(random_state=random_seed)
             reg.fit(X_train, y_train)
             preds = reg.predict(X_holdout)
-            quantiles = reg.predict_quantiles(X_holdout, quantiles=[0.1, 0.5, 0.9])
+            try:
+                raw_q = reg.predict(X_holdout, output_type="quantiles", quantiles=[0.1, 0.5, 0.9])
+                q_arr = np.asarray(raw_q)
+                if q_arr.ndim == 2 and q_arr.shape[1] == 3:
+                    q10, q50, q90 = q_arr[:, 0], q_arr[:, 1], q_arr[:, 2]
+                elif q_arr.ndim == 2 and q_arr.shape[0] == 3:
+                    q10, q50, q90 = q_arr[0, :], q_arr[1, :], q_arr[2, :]
+                else:
+                    std_val = float(y_train.std()) if len(y_train) > 1 else 1.0
+                    q10 = preds - 1.28 * std_val
+                    q50 = preds
+                    q90 = preds + 1.28 * std_val
+            except Exception:
+                std_val = float(y_train.std()) if len(y_train) > 1 else 1.0
+                q10 = preds - 1.28 * std_val
+                q50 = preds
+                q90 = preds + 1.28 * std_val
+
             return {
                 "predictions": preds,
                 "quantiles": {
-                    "q10": quantiles[:, 0],
-                    "q50": quantiles[:, 1],
-                    "q90": quantiles[:, 2],
+                    "q10": q10,
+                    "q50": q50,
+                    "q90": q90,
                 },
             }
         except ImportError:

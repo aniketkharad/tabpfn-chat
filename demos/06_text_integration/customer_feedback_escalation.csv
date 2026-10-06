@@ -1,0 +1,121 @@
+ticket_id,feedback_text,account_tier,monthly_spend,tenure_months,needs_escalation
+TCK_001,Works as expected after update,Basic,263.95,7,0
+TCK_002,Charged incorrect amount no refund,Enterprise,1907.52,29,1
+TCK_003,Great onboarding session,Pro,748.98,10,0
+TCK_004,Appreciated the helpful guidance,Enterprise,964.06,34,0
+TCK_005,Unacceptable downtime demand manager,Enterprise,1885.06,5,1
+TCK_006,Great onboarding session,Basic,141.32,18,0
+TCK_007,Charged incorrect amount no refund,Enterprise,2420.22,29,1
+TCK_008,Polite representative and clear steps,Basic,87.72,12,0
+TCK_009,Unable to log in for two days emergency,Enterprise,2259.3,13,1
+TCK_010,Resolved my issue within minutes,Pro,342.35,22,0
+TCK_011,Service is completely down urgently fix,Enterprise,2483.09,2,1
+TCK_012,Great onboarding session,Basic,248.25,39,0
+TCK_013,Helpful documentation and easy fix,Basic,104.64,33,0
+TCK_014,Great onboarding session,Pro,656.97,18,0
+TCK_015,Works as expected after update,Pro,254.17,34,0
+TCK_016,Recurring failures zero communication,Enterprise,846.95,34,1
+TCK_017,Very clear instructions provided,Enterprise,1442.07,37,0
+TCK_018,System crashed during migration urgent,Enterprise,2171.62,35,1
+TCK_019,Fast turnaround on my inquiry,Enterprise,1327.31,7,0
+TCK_020,Appreciated the helpful guidance,Enterprise,1168.02,35,0
+TCK_021,Quick response from agent,Enterprise,1389.61,36,0
+TCK_022,Very clear instructions provided,Basic,103.57,9,0
+TCK_023,Data loss detected please call me now,Enterprise,881.12,26,1
+TCK_024,Database connection dropped lost data,Pro,521.92,22,1
+TCK_025,Database connection dropped lost data,Enterprise,1983.25,24,1
+TCK_026,Unable to log in for two days emergency,Basic,193.54,26,1
+TCK_027,Fast turnaround on my inquiry,Basic,133.44,7,0
+TCK_028,Unacceptable downtime demand manager,Enterprise,1669.28,20,1
+TCK_029,Works as expected after update,Basic,240.05,30,0
+TCK_030,Agent was extremely rude and unhelpful,Pro,815.85,24,1
+TCK_031,Production API broken emergency assistance,Basic,74.07,19,1
+TCK_032,Appreciated the helpful guidance,Pro,606.54,20,0
+TCK_033,Unable to log in for two days emergency,Basic,73.26,30,1
+TCK_034,Resolved my issue within minutes,Enterprise,1106.96,10,0
+TCK_035,Unacceptable downtime demand manager,Pro,613.38,26,1
+TCK_036,Recurring failures zero communication,Basic,415.04,12,1
+TCK_037,Great onboarding session,Basic,176.11,9,0
+TCK_038,Polite representative and clear steps,Basic,181.84,44,0
+TCK_039,Fast turnaround on my inquiry,Pro,204.24,26,0
+TCK_040,Recurring failures zero communication,Pro,453.98,1,1
+TCK_041,Resolved my issue within minutes,Enterprise,1138.98,23,0
+TCK_042,Unacceptable downtime demand manager,Enterprise,2165.92,10,1
+TCK_043,Critical outage billing failed twice,Pro,760.38,16,1
+TCK_044,Quick response from agent,Basic,195.92,42,0
+TCK_045,Great onboarding session,Pro,690.33,3,0
+TCK_046,Great onboarding session,Pro,310.06,9,0
+TCK_047,Production API broken emergency assistance,Enterprise,1951.19,35,1
+TCK_048,Satisfied with the support resolution,Basic,221.95,42,0
+TCK_049,Charged incorrect amount no refund,Enterprise,2034.36,13,1
+TCK_050,Agent was extremely rude and unhelpful,Enterprise,1392.17,11,1
+TCK_051,Feature works nicely thank you,Basic,91.15,26,0
+TCK_052,Appreciated the helpful guidance,Pro,536.77,15,0
+TCK_053,Database connection dropped lost data,Enterprise,2177.19,25,1
+TCK_054,Critical outage billing failed twice,Pro,845.87,22,1
+TCK_055,Polite representative and clear steps,Basic,214.7,5,0
+TCK_056,Satisfied with the support resolution,Enterprise,1141.0,25,0
+TCK_057,Appreciated the helpful guidance,Enterprise,855.53,47,0
+TCK_058,Production API broken emergency assistance,Pro,543.53,33,1
+TCK_059,Very clear instructions provided,Pro,554.78,23,0
+TCK_060,Appreciated the helpful guidance,Pro,470.3,19,0
+TCK_061,Security issue unauthorized login alert,Enterprise,1411.13,29,1
+TCK_062,Unable to log in for two days emergency,Pro,628.8,23,1
+TCK_063,Quick response from agent,Pro,605.41,26,0
+TCK_064,Satisfied with the support resolution,Pro,501.61,24,0
+TCK_065,Works as expected after update,Pro,548.41,26,0
+TCK_066,Helpful documentation and easy fix,Enterprise,1146.33,46,0
+TCK_067,Great onboarding session,Basic,238.41,5,0
+TCK_068,Satisfied with the support resolution,Basic,75.17,26,0
+TCK_069,Appreciated the helpful guidance,Basic,388.87,45,0
+TCK_070,Polite representative and clear steps,Basic,264.71,3,0
+TCK_071,Appreciated the helpful guidance,Pro,226.16,45,0
+TCK_072,Unacceptable downtime demand manager,Enterprise,1166.9,5,1
+TCK_073,Resolved my issue within minutes,Basic,305.34,4,0
+TCK_074,Fast turnaround on my inquiry,Basic,198.75,45,0
+TCK_075,Feature works nicely thank you,Pro,716.44,40,0
+TCK_076,Great onboarding session,Enterprise,844.92,28,0
+TCK_077,Great onboarding session,Basic,292.95,27,0
+TCK_078,Charged incorrect amount no refund,Enterprise,824.47,14,1
+TCK_079,Smooth setup and prompt answer,Basic,230.74,23,0
+TCK_080,Satisfied with the support resolution,Pro,429.76,15,0
+TCK_081,Feature works nicely thank you,Basic,99.01,30,0
+TCK_082,Service is completely down urgently fix,Pro,543.77,17,1
+TCK_083,Agent was extremely rude and unhelpful,Pro,725.52,32,1
+TCK_084,Smooth setup and prompt answer,Basic,154.92,16,0
+TCK_085,Fast turnaround on my inquiry,Basic,42.72,15,0
+TCK_086,Polite representative and clear steps,Basic,394.69,33,0
+TCK_087,Smooth setup and prompt answer,Pro,439.92,29,0
+TCK_088,Very clear instructions provided,Pro,512.5,41,0
+TCK_089,Database connection dropped lost data,Enterprise,1879.66,34,1
+TCK_090,Critical outage billing failed twice,Pro,693.38,33,1
+TCK_091,Great onboarding session,Enterprise,1020.09,38,0
+TCK_092,Critical outage billing failed twice,Pro,451.7,25,1
+TCK_093,Polite representative and clear steps,Basic,130.4,25,0
+TCK_094,Agent was extremely rude and unhelpful,Pro,581.06,23,1
+TCK_095,System crashed during migration urgent,Basic,86.39,9,1
+TCK_096,Critical outage billing failed twice,Basic,420.17,33,1
+TCK_097,Fast turnaround on my inquiry,Pro,311.94,31,0
+TCK_098,Works as expected after update,Basic,397.12,34,0
+TCK_099,Service is completely down urgently fix,Pro,406.32,25,1
+TCK_100,Smooth setup and prompt answer,Basic,275.13,3,0
+TCK_101,Unacceptable downtime demand manager,Enterprise,2405.23,28,1
+TCK_102,Satisfied with the support resolution,Basic,133.18,20,0
+TCK_103,Resolved my issue within minutes,Basic,389.56,13,0
+TCK_104,Recurring failures zero communication,Basic,58.2,35,1
+TCK_105,Works as expected after update,Pro,450.45,38,0
+TCK_106,Smooth setup and prompt answer,Basic,361.97,38,0
+TCK_107,Unable to log in for two days emergency,Enterprise,975.31,17,1
+TCK_108,Appreciated the helpful guidance,Pro,563.58,43,0
+TCK_109,Great onboarding session,Basic,285.65,40,0
+TCK_110,Recurring failures zero communication,Basic,393.51,21,1
+TCK_111,Service is completely down urgently fix,Pro,753.22,25,1
+TCK_112,Recurring failures zero communication,Pro,924.08,31,1
+TCK_113,Very clear instructions provided,Basic,65.3,24,0
+TCK_114,Helpful documentation and easy fix,Basic,283.17,8,0
+TCK_115,Recurring failures zero communication,Basic,68.33,5,1
+TCK_116,Polite representative and clear steps,Pro,546.14,34,0
+TCK_117,Quick response from agent,Pro,763.7,37,0
+TCK_118,Database connection dropped lost data,Basic,416.51,7,1
+TCK_119,Critical outage billing failed twice,Basic,228.55,14,1
+TCK_120,Helpful documentation and easy fix,Pro,335.9,33,0

@@ -1,0 +1,149 @@
+
+==================== [ TABCHAT SESSION AUDIT TRAIL ] ====================
+Session ID : 98e3d5e92e423fc7256d628cbae29e1d
+Disk Path  : /Users/aniketkharad/3. Portfolio/tabpfn_chat/data/sessions/98e3d5e92e423fc7256d628cbae29e1d
+
+--- 1. Session Initialization ------------------------------------------
+Initialized At : 2026-10-06T19:30:37.410398+00:00
+Session Status : Active on disk
+
+--- 2. Dataset Shape & Column Metadata ---------------------------------
+Dimensions : 144 rows × 4 columns (3,235 bytes)
+
+  #  | Column Name                    | Type         | Nulls | Uniques
+  ---|--------------------------------|--------------|-------|--------
+  01 | date                           | datetime     | 0     | 144    
+  02 | year                           | numeric      | 0     | 12     
+  03 | month_num                      | numeric      | 0     | 12     
+  04 | passengers                     | numeric      | 0     | 118    
+
+--- 3. Conversational Chat Turns ---------------------------------------
+[Turn 1 - USER] (2026-10-06T19:30:37.410398+00:00)
+  > I want to forecast international airline passenger demand (passengers) forward in time based on year and month_num. Use date for chronological validation split to evaluate future holdout accuracy with RMSE.
+[ASSISTANT]
+  I have configured an analysis plan to predict 'passengers' using 2 features (regression). Forecasting continuous passenger demand using year and month_num features with a chronological split on date evaluated via RMSE.
+[ASSISTANT]
+  ### Executive Summary
+  This report evaluates the performance of the TabPFN regression model in forecasting continuous passenger demand (`passengers`) based on the `year` and `month_num` features. Using a chronological split, the dataset of 144 total rows was divided into 115 training rows and 29 holdout cases. TabPFN achieved a Root Mean Squared Error (RMSE) of **16.7262** and an $R^2$ of **0.9542**, substantially outperforming the trivial mean-target baseline.
+  
+  ---
+  
+  ### Model Performance vs. Baseline
+  The model's predictions are compared against a naive baseline (mean-target predictor) evaluated on the exact same holdout split:
+  
+  * **Baseline Metrics**: 
+    * RMSE: **215.0573**
+    * $R^2$: **-6.5763**
+  * **TabPFN Model Metrics**: 
+    * RMSE: **16.7262**
+    * $R^2$: **0.9542**
+  * **Delta / Lift**: 
+    * RMSE Error Reduction: **-198.3311** (a massive reduction in error)
+    * $R^2$ Improvement: **+7.5305** (shifting from severe underperformance to explaining 95.42% of the variance)
+  
+  TabPFN successfully captures the underlying trend and seasonal patterns, easily beating the naive baseline.
+  
+  ---
+  
+  ### Uncertainty & Sample Analysis
+  Prediction intervals (80% coverage, bounded by `q10` and `q90`) provide calibrated uncertainty estimates for individual forecasts:
+  
+  * **High Confidence & Accuracy**: For row index 117 (Year: 1958, Month: 10), the actual passenger count was **359.0**, and the model predicted **361.5698** with a tight interval from **346.9053** (`q10`) to **376.5903** (`q90`), demonstrating high precision and appropriate certainty.
+  * **Wider Uncertainty**: For row index 120 (Year: 1959, Month: 1), the actual value was **360.0** and the prediction was **382.0495**. The model expressed higher uncertainty, widening the 80% interval from **320.9189** (`q10`) to **445.8511** (`q90`), correctly reflecting the difficulty of extrapolating into a new yearly cycle.
+  * **Minor Errors**: For row index 119 (Year: 1958, Month: 12), the actual value was **337.0** against a prediction of **357.6120** (interval: **340.75** to **375.3429**), where the actual fell just outside the lower bound of the 80% prediction interval.
+  
+  ---
+  
+  ### Caveats & Limitations
+  * **Dataset Size Caveat**: The total dataset contains 144 rows (with 29 rows in the holdout set). Because the total row count is relatively small, evaluation variance and confidence intervals are wider than they would be on a large-scale dataset. 
+  * **Chronological Split Constraints**: The evaluation relies on a chronological split (`split_column: "date"`, holdout fraction 0.2). Because time-series data often exhibits non-stationarity or trend shifts outside the training window, performance on future unseen periods should be monitored continuously in production settings.
+
+--- 4. Analytical Job Spec ---------------------------------------------
+Task Type       : regression
+Target Column   : passengers
+Feature Columns : year, month_num
+Excluded Columns: date
+Split Strategy  : chronological (holdout=20%, seed=42)
+Split Column    : date
+Evaluation Metric: rmse
+Rationale       : Forecasting continuous passenger demand using year and month_num features with a chronological split on date evaluated via RMSE.
+
+Canonical JobSpec JSON:
+{
+  "task_type": "regression",
+  "target_column": "passengers",
+  "feature_columns": [
+    "year",
+    "month_num"
+  ],
+  "excluded_columns": [
+    "date"
+  ],
+  "split_strategy": "chronological",
+  "split_column": "date",
+  "holdout_fraction": 0.2,
+  "random_seed": 42,
+  "eval_metric": "rmse",
+  "confidence_intervals": true,
+  "rationale": "Forecasting continuous passenger demand using year and month_num features with a chronological split on date evaluated via RMSE."
+}
+
+--- 5. Execution Metrics vs Baseline -----------------------------------
+Sample Partitioning: Train = 115 rows | Holdout = 29 rows
+
+  Metric        | Baseline   | TabPFN-3.5 | Delta (Lift)
+  --------------|------------|------------|-------------
+  r2            | -6.5763    | 0.9542     | +7.5305    
+  rmse          | 215.0573   | 16.7262    | -198.3311  
+
+Sample Predictions Preview (First 10 holdout rows):
+  Row Index | Actual     | Predicted  | Confidence / Quantiles
+  ----------|------------|------------|------------------------
+  115       | 505.0      | 481.4871520996094 | Q10: 460.4456, Q50: 480.2519, Q90: 503.4235
+  116       | 404.0      | 417.36236572265625 | Q10: 400.5337, Q50: 417.4776, Q90: 433.9193
+  117       | 359.0      | 361.56982421875 | Q10: 346.9053, Q50: 361.5379, Q90: 376.5903
+  118       | 310.0      | 316.3421630859375 | Q10: 301.1669, Q50: 316.219, Q90: 332.1656
+  119       | 337.0      | 357.6119689941406 | Q10: 340.75, Q50: 357.1865, Q90: 375.3429
+  120       | 360.0      | 382.04949951171875 | Q10: 320.9189, Q50: 376.4683, Q90: 445.8511
+  121       | 342.0      | 377.72198486328125 | Q10: 312.9342, Q50: 368.8707, Q90: 449.1797
+  122       | 406.0      | 427.32916259765625 | Q10: 370.8466, Q50: 422.9883, Q90: 486.328
+  123       | 396.0      | 416.09735107421875 | Q10: 359.6323, Q50: 410.5053, Q90: 477.0343
+  124       | 420.0      | 423.58465576171875 | Q10: 362.765, Q50: 418.8028, Q90: 487.5121
+
+--- 6. Final Calibrated Narration --------------------------------------
+### Executive Summary
+This report evaluates the performance of the TabPFN regression model in forecasting continuous passenger demand (`passengers`) based on the `year` and `month_num` features. Using a chronological split, the dataset of 144 total rows was divided into 115 training rows and 29 holdout cases. TabPFN achieved a Root Mean Squared Error (RMSE) of **16.7262** and an $R^2$ of **0.9542**, substantially outperforming the trivial mean-target baseline.
+
+---
+
+### Model Performance vs. Baseline
+The model's predictions are compared against a naive baseline (mean-target predictor) evaluated on the exact same holdout split:
+
+* **Baseline Metrics**: 
+  * RMSE: **215.0573**
+  * $R^2$: **-6.5763**
+* **TabPFN Model Metrics**: 
+  * RMSE: **16.7262**
+  * $R^2$: **0.9542**
+* **Delta / Lift**: 
+  * RMSE Error Reduction: **-198.3311** (a massive reduction in error)
+  * $R^2$ Improvement: **+7.5305** (shifting from severe underperformance to explaining 95.42% of the variance)
+
+TabPFN successfully captures the underlying trend and seasonal patterns, easily beating the naive baseline.
+
+---
+
+### Uncertainty & Sample Analysis
+Prediction intervals (80% coverage, bounded by `q10` and `q90`) provide calibrated uncertainty estimates for individual forecasts:
+
+* **High Confidence & Accuracy**: For row index 117 (Year: 1958, Month: 10), the actual passenger count was **359.0**, and the model predicted **361.5698** with a tight interval from **346.9053** (`q10`) to **376.5903** (`q90`), demonstrating high precision and appropriate certainty.
+* **Wider Uncertainty**: For row index 120 (Year: 1959, Month: 1), the actual value was **360.0** and the prediction was **382.0495**. The model expressed higher uncertainty, widening the 80% interval from **320.9189** (`q10`) to **445.8511** (`q90`), correctly reflecting the difficulty of extrapolating into a new yearly cycle.
+* **Minor Errors**: For row index 119 (Year: 1958, Month: 12), the actual value was **337.0** against a prediction of **357.6120** (interval: **340.75** to **375.3429**), where the actual fell just outside the lower bound of the 80% prediction interval.
+
+---
+
+### Caveats & Limitations
+* **Dataset Size Caveat**: The total dataset contains 144 rows (with 29 rows in the holdout set). Because the total row count is relatively small, evaluation variance and confidence intervals are wider than they would be on a large-scale dataset. 
+* **Chronological Split Constraints**: The evaluation relies on a chronological split (`split_column: "date"`, holdout fraction 0.2). Because time-series data often exhibits non-stationarity or trend shifts outside the training window, performance on future unseen periods should be monitored continuously in production settings.
+
+========================================================================

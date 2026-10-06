@@ -40,6 +40,24 @@ A local-first, interactive tabular analysis tool powered by **Gemini** and Prior
 
 ---
 
+## 🏆 Empirical Case Studies & Benchmarks
+
+Explore 7 complete, end-to-end capability evaluations comparing TabPFN-3.5 zero-shot predictions against deterministic baselines across real-world tabular domains:
+
+| # | Capability | Domain | TabPFN-3.5 vs. Baseline | Highlights |
+| :-: | :--- | :--- | :-: | :--- |
+| **01** | [**Classification**](demos/01_classification/) | Customer Churn | **0.9286** vs 0.5357 Acc | **+39.3% Lift**, ID leakage prevention |
+| **02** | [**Regression**](demos/02_regression/) | Housing Valuation | **30.90** vs 93.64 RMSE | **67% Error Reduction**, $q_{10}$–$q_{90}$ quantiles |
+| **03** | [**Forecasting**](demos/03_time_series_forecasting/) | Air Passengers | **16.73** vs 215.06 RMSE | **0.9542 $R^2$**, Box-Jenkins monthly trend |
+| **04** | [**Anomaly Detection**](demos/04_anomaly_detection/) | Equipment Failure | **1.0000** vs 0.9167 Acc | **0.0001 Log Loss**, 6.7% rare failure isolation |
+| **05** | [**Data Generation**](demos/05_data_generation/) | Clinical Patients | **0.8000** vs 0.5000 Acc | Privacy-preserving synthetic table expansion |
+| **06** | [**Text Integration**](demos/06_text_integration/) | Support Escalations | **1.0000** vs 0.5833 Acc | **+41.7% Lift**, multimodal text embeddings |
+| **07** | [**Interpretability**](demos/07_interpretability/) | Diabetes Diagnosis | **0.8333** vs 0.6667 Acc | Permutation importance: `glucose_level` driver |
+
+👉 **[Read the Full Empirical Report (CASE_STUDIES.md)](CASE_STUDIES.md)** for detailed clinical/business insights, high-res UI screenshots, rendered HTML snapshots, and terminal audit logs.
+
+---
+
 ## 🛠️ Quickstart
 
 ### Prerequisites
